@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.32.4,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hephestus-agent"
+version = "0.2.0"
+description = "A supervised local LLM command agent developed for an MSc in Cybersecurity."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+  "click==8.5.0",
+  "rich==15.0.0",
+  "PyYAML==6.0.3",
+  "Flask==3.1.3",
+  "paramiko==5.1.0",
+  "llama-cpp-python==0.3.36",
+]
+
+[project.scripts]
+hephestus = "hephestus.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hephestus"]
+
+[tool.hatch.build.targets.sdist]
+include = ["hephestus/", "docs/", "models/README.md", "setup.py", "web.py", "config.example.yaml", "requirements.txt", "README.md", "LICENSE", "SECURITY.md", "CHANGELOG.md", "CITATION.cff", ".gitignore"]

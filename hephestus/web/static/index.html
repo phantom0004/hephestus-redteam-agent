@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hephestus Agent</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f17;
+            --bg-secondary: #1a1a27;
+            --bg-tertiary: #252536;
+            --bg-elevated: #2d2d42;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9898a6;
+            --text-muted: #6b6b7a;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.15);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.15);
+            --error: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.15);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.15);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.25s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-gradient);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-version {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Status Panel */
+        .status-panel {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-panel h3 {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.75rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .status-dot.idle { background: var(--text-muted); }
+        .status-dot.running {
+            background: var(--accent-primary);
+            animation: pulse 2s infinite;
+        }
+        .status-dot.waiting_for_user {
+            background: var(--warning);
+            animation: pulse 1s infinite;
+        }
+        .status-dot.completed { background: var(--success); }
+        .status-dot.error { background: var(--error); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .status-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        /* System Info */
+        .system-info {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .system-info h3 {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .info-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .info-badge.connected {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .info-badge.disconnected {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+
+        .info-badge.unknown {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            padding: 1.25rem;
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+        }
+
+        .quick-actions h3 {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            margin-bottom: 0.5rem;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-strong);
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-elevated);
+            border-color: var(--border-strong);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            filter: brightness(1.1);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            filter: brightness(1.1);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            filter: brightness(1.1);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover:not(:disabled) {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8rem;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* Task Card */
+        .task-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .task-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .task-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .task-card-title svg {
+            width: 20px;
+            height: 20px;
+            color: var(--accent-primary);
+        }
+
+        .task-card-body {
+            padding: 1.25rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: var(--transition-fast);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input:disabled,
+        .form-textarea:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-textarea.context {
+            min-height: 80px;
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        /* Log Section */
+        .log-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            background: var(--bg-primary);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+
+        .log-entry {
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--border);
+            transition: var(--transition-fast);
+        }
+
+        .log-entry:hover {
+            background: var(--bg-elevated);
+        }
+
+        .log-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .log-entry.event-run_started { border-left-color: var(--accent-primary); }
+        .log-entry.event-planner_output { border-left-color: var(--accent-secondary); }
+        .log-entry.event-proposed_commands { border-left-color: var(--warning); }
+        .log-entry.event-execution_result { border-left-color: var(--success); }
+        .log-entry.event-error { border-left-color: var(--error); }
+        .log-entry.event-run_completed { border-left-color: var(--success); }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .log-event {
+            font-weight: 500;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            background: var(--bg-secondary);
+        }
+
+        .log-event.event-run_started { color: var(--accent-primary); }
+        .log-event.event-planner_output { color: var(--accent-secondary); }
+        .log-event.event-proposed_commands { color: var(--warning); }
+        .log-event.event-execution_result { color: var(--success); }
+        .log-event.event-error { color: var(--error); }
+        .log-event.event-run_completed { color: var(--success); }
+
+        .log-data {
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-data.markdown-rendered {
+            white-space: normal;
+        }
+
+        .log-data.markdown-rendered h1,
+        .log-data.markdown-rendered h2,
+        .log-data.markdown-rendered h3 {
+            color: var(--text-primary);
+            margin: 0.75rem 0 0.4rem 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .log-data.markdown-rendered h1 { font-size: 1.1rem; }
+        .log-data.markdown-rendered h2 { font-size: 1rem; }
+        .log-data.markdown-rendered h3 { font-size: 0.9rem; }
+
+        .log-data.markdown-rendered p {
+            margin: 0.4rem 0;
+        }
+
+        .log-data.markdown-rendered code {
+            background: var(--bg-primary);
+            color: var(--accent-primary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+        }
+
+        .log-data.markdown-rendered pre {
+            background: var(--bg-primary);
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+
+        .log-data.markdown-rendered pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .log-data.markdown-rendered ul,
+        .log-data.markdown-rendered ol {
+            margin: 0.4rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .log-data.markdown-rendered li {
+            margin: 0.2rem 0;
+        }
+
+        .log-data.markdown-rendered strong {
+            color: var(--text-primary);
+        }
+
+        .log-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .log-empty svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .log-empty p {
+            font-size: 0.9rem;
+        }
+
+        /* Approval Panel */
+        .approval-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-normal);
+        }
+
+        .approval-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .approval-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 2px solid var(--warning);
+            padding: 1.5rem 2rem;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            max-height: 60vh;
+            overflow-y: auto;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .approval-panel.visible {
+            transform: translateY(0);
+        }
+
+        .approval-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .approval-header svg {
+            width: 24px;
+            height: 24px;
+            color: var(--warning);
+        }
+
+        .approval-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--warning);
+        }
+
+        .approval-header .count {
+            background: var(--warning-bg);
+            color: var(--warning);
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .command-list {
+            margin-bottom: 1.25rem;
+        }
+
+        .command-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.875rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border);
+            transition: var(--transition-fast);
+        }
+
+        .command-item:hover {
+            border-color: var(--border-strong);
+        }
+
+        .command-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent-primary);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .command-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            flex: 1;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .approval-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Help Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-normal);
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.visible .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(80vh - 70px);
+        }
+
+        .help-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .help-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .help-section h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .help-section p,
+        .help-section li {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .help-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .help-section li {
+            padding: 0.4rem 0;
+            padding-left: 1.25rem;
+            position: relative;
+        }
+
+        .help-section li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.85rem;
+            width: 6px;
+            height: 6px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .mobile-header {
+                display: flex !important;
+            }
+        }
+
+        .mobile-header {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--error); }
+        .toast.warning { border-left: 3px solid var(--warning); }
+
+        .toast-message {
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">H</div>
+                    <div>
+                        <div class="logo-text">Hephestus</div>
+                        <div class="logo-version">v0.2.0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <h3>Agent Status</h3>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <div class="status-text">
+                        <div class="status-label">Current State</div>
+                        <div class="status-value" id="statusText">Idle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="system-info">
+                <h3>System Information</h3>
+                <div class="info-item">
+                    <span class="info-label">Backend</span>
+                    <span class="info-value" id="backendInfo">local</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">LLM Status</span>
+                    <span class="info-badge unknown" id="llmStatus">Unknown</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Run ID</span>
+                    <span class="info-value" id="runIdInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Steps</span>
+                    <span class="info-value" id="stepsInfo">0 / 15</span>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <button class="action-btn" id="helpBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Help & Shortcuts
+                </button>
+                <button class="action-btn" id="clearLogsBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Clear Logs
+                </button>
+                <button class="action-btn" id="refreshBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23,4 23,10 17,10"/>
+                        <polyline points="1,20 1,14 7,14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                    Refresh State
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Mobile Header -->
+            <div class="mobile-header">
+                <button class="menu-btn" id="menuBtn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="logo-text">Hephestus</div>
+            </div>
+
+            <!-- Header -->
+            <header class="header">
+                <h1 class="header-title">Command Center</h1>
+                <div class="header-actions">
+                    <button id="stopBtn" class="btn btn-danger hidden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="6" width="12" height="12"/>
+                        </svg>
+                        Stop Run
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content-area">
+                <!-- Task Input Card -->
+                <div class="task-card" id="taskCard">
+                    <div class="task-card-header">
+                        <div class="task-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            New Task
+                        </div>
+                    </div>
+                    <div class="task-card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="goalInput">Task Goal</label>
+                            <textarea
+                                id="goalInput"
+                                class="form-textarea"
+                                placeholder="Describe what you want the agent to accomplish..."></textarea>
+                            <div class="form-hint">Be specific about the desired outcome. The agent will plan and execute steps to achieve this goal.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="contextInput">Additional Context (Optional)</label>
+                            <textarea
+                                id="contextInput"
+                                class="form-textarea context"
+                                placeholder="Provide any relevant context, constraints, or preferences..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button id="startBtn" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
+                                Start Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Card -->
+                <div class="task-card log-card">
+                    <div class="task-card-header">
+                        <div class="task-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                            Activity Log
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="clearLogsBtnHeader">
+                            Clear
+                        </button>
+                    </div>
+                    <div id="logContent" class="log-content">
+                        <div class="log-empty">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <p>No activity yet</p>
+                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a task goal and click Start to begin</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Overlay -->
+    <div class="approval-overlay" id="approvalOverlay"></div>
+
+    <!-- Approval Panel -->
+    <div id="approvalPanel" class="approval-panel">
+        <div class="approval-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <h3>Commands Awaiting Approval</h3>
+            <span class="count" id="commandCount">0</span>
+        </div>
+        <div id="commandList" class="command-list"></div>
+        <div class="approval-actions">
+            <button id="approveSelectedBtn" class="btn btn-success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Approve Selected
+            </button>
+            <button id="approveAllBtn" class="btn btn-success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                Approve All
+            </button>
+            <button id="rejectAllBtn" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                Reject All
+            </button>
+            <button id="abortBtn" class="btn btn-danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="6" width="12" height="12"/>
+                </svg>
+                Abort Run
+            </button>
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                Update goal (rejects all commands and replans with new instructions):
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="goalUpdateInput" placeholder="e.g. use read-only commands and explain the last error..."
+                    style="flex: 1; padding: 0.5rem 0.75rem; background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                <button id="updateGoalBtn" class="btn btn-secondary" style="white-space: nowrap;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Update Goal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Help & Keyboard Shortcuts</h2>
+                <button class="modal-close" id="helpModalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h4>Getting Started</h4>
+                    <p>Hephestus is a supervised research command agent. Commands run with your account permissions; policy checks are not a sandbox. Enter a goal, and the agent will plan and propose commands to achieve it. All commands require your explicit approval before execution.</p>
+                </div>
+                <div class="help-section">
+                    <h4>Keyboard Shortcuts</h4>
+                    <ul>
+                        <li><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> - Start a new task</li>
+                        <li><span class="kbd">Escape</span> - Close modals / Cancel approval</li>
+                        <li><span class="kbd">A</span> - Approve all commands (when approval panel is open)</li>
+                        <li><span class="kbd">R</span> - Reject all commands (when approval panel is open)</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Safety Features</h4>
+                    <ul>
+                        <li>All commands must be approved before execution</li>
+                        <li>Dangerous commands are blocked by policy</li>
+                        <li>Kill switch: Create a file named HEPHESTUS_STOP to halt immediately</li>
+                        <li>Maximum steps limit prevents runaway execution</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Local Model</h4>
+                    <p>Hephestus runs the configured GGUF model locally with llama.cpp. Ensure the model file exists and that llama-cpp-python is installed; CUDA-enabled builds use available GPU memory for acceleration.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // The launch capability is carried in the URL fragment, never sent in request URLs.
+        const launchParams = new URLSearchParams(window.location.hash.slice(1));
+        const operatorToken = launchParams.get('token') || sessionStorage.getItem('hephestusToken') || '';
+        if (launchParams.has('token')) {
+            sessionStorage.setItem('hephestusToken', operatorToken);
+            history.replaceState(null, '', window.location.pathname);
+        }
+
+        // State
+        const state = {
+            status: 'idle',
+            proposalId: null,
+            privilegedIndices: [],
+            pendingCommands: [],
+            eventSource: null,
+            runId: null,
+            steps: 0,
+            maxSteps: 15,
+            logsStarted: false
+        };
+
+        // DOM Elements
+        const elements = {
+            // Sidebar
+            sidebar: document.getElementById('sidebar'),
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText'),
+            backendInfo: document.getElementById('backendInfo'),
+            llmStatus: document.getElementById('llmStatus'),
+            runIdInfo: document.getElementById('runIdInfo'),
+            stepsInfo: document.getElementById('stepsInfo'),
+
+            // Main
+            goalInput: document.getElementById('goalInput'),
+            contextInput: document.getElementById('contextInput'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            taskCard: document.getElementById('taskCard'),
+            logContent: document.getElementById('logContent'),
+
+            // Approval
+            approvalOverlay: document.getElementById('approvalOverlay'),
+            approvalPanel: document.getElementById('approvalPanel'),
+            commandList: document.getElementById('commandList'),
+            commandCount: document.getElementById('commandCount'),
+            approveSelectedBtn: document.getElementById('approveSelectedBtn'),
+            approveAllBtn: document.getElementById('approveAllBtn'),
+            rejectAllBtn: document.getElementById('rejectAllBtn'),
+            abortBtn: document.getElementById('abortBtn'),
+            goalUpdateInput: document.getElementById('goalUpdateInput'),
+            updateGoalBtn: document.getElementById('updateGoalBtn'),
+
+            // Actions
+            clearLogsBtn: document.getElementById('clearLogsBtn'),
+            clearLogsBtnHeader: document.getElementById('clearLogsBtnHeader'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            helpBtn: document.getElementById('helpBtn'),
+            menuBtn: document.getElementById('menuBtn'),
+
+            // Modal
+            helpModal: document.getElementById('helpModal'),
+            helpModalClose: document.getElementById('helpModalClose'),
+
+            // Toast
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span class="toast-message">${escapeHtml(message)}</span>`;
+            elements.toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Update status display
+        function updateStatus(status) {
+            state.status = status;
+
+            elements.statusDot.className = 'status-dot ' + status;
+            elements.statusText.textContent = status.replace(/_/g, ' ');
+
+            const isActive = status === 'running' || status === 'waiting_for_user' || status === 'stopping';
+            elements.startBtn.disabled = isActive;
+            elements.stopBtn.classList.toggle('hidden', !isActive);
+            elements.goalInput.disabled = isActive;
+            elements.contextInput.disabled = isActive;
+
+            if (status === 'completed') {
+                showToast('Run ended. Review the output; the goal is not automatically verified.', 'info');
+            } else if (status === 'error') {
+                showToast('Task failed with an error', 'error');
+            }
+        }
+
+        // Update system info
+        function updateSystemInfo(data) {
+            if (data.run_id) {
+                state.runId = data.run_id;
+                elements.runIdInfo.textContent = data.run_id.substring(0, 8) + '...';
+            }
+            if (data.step !== undefined) {
+                state.steps = data.step;
+                elements.stepsInfo.textContent = `${data.step} / ${state.maxSteps}`;
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Add log entry
+        function addLog(entry) {
+            if (!state.logsStarted) {
+                state.logsStarted = true;
+                elements.logContent.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            const eventClass = entry.event ? `event-${entry.event}` : '';
+            div.className = `log-entry ${eventClass}`;
+
+            const time = new Date(entry.ts).toLocaleTimeString();
+            const eventType = entry.event || 'info';
+            let dataText = '';
+
+            if (entry.run_id) updateSystemInfo({ run_id: entry.run_id });
+            if (entry.data) {
+                if (eventType === 'planner_output' && entry.data.text) {
+                    dataText = entry.data.text;
+                } else if (eventType === 'proposed_commands' && entry.data.commands) {
+                    dataText = 'Commands:\n' + entry.data.commands.map(c => '  ' + c).join('\n');
+                } else if (eventType === 'execution_result') {
+                    dataText = `Command: ${entry.data.command}\nExit Code: ${entry.data.exit_code}`;
+                    if (entry.data.stdout) dataText += `\n\nOutput:\n${entry.data.stdout.substring(0, 500)}`;
+                    if (entry.data.stderr) dataText += `\n\nStderr:\n${entry.data.stderr.substring(0, 200)}`;
+                } else if (eventType === 'approval_decision') {
+                    dataText = `Approved: ${entry.data.approved?.length || 0}, Rejected: ${entry.data.rejected?.length || 0}`;
+                } else if (eventType === 'start_run') {
+                    dataText = `Goal: ${entry.data.goal || 'N/A'}`;
+                    if (entry.data.run_id) updateSystemInfo({ run_id: entry.data.run_id });
+                } else if (eventType === 'run_complete') {
+                    dataText = `Model claim: ${entry.data.reason || 'unverified completion'}. Verify the recorded output.`;
+                } else if (eventType === 'error') {
+                    dataText = entry.data.message || JSON.stringify(entry.data);
+                } else if (typeof entry.data === 'string') {
+                    dataText = entry.data;
+                } else {
+                    dataText = JSON.stringify(entry.data, null, 2);
+                }
+
+                if (entry.data.attempt !== undefined) {
+                    updateSystemInfo({ step: entry.data.attempt });
+                }
+            }
+
+            // Model output is always escaped; it cannot become browser code.
+            const isMarkdown = false;
+            const renderedData = escapeHtml(dataText);
+            const markdownClass = isMarkdown ? ' markdown-rendered' : '';
+
+            div.innerHTML = `
+                <div class="log-header">
+                    <span class="log-time">${time}</span>
+                    <span class="log-event ${eventClass}">${eventType.replace(/_/g, ' ')}</span>
+                </div>
+                <div class="log-data${markdownClass}">${renderedData}</div>
+            `;
+
+            elements.logContent.appendChild(div);
+            elements.logContent.scrollTop = elements.logContent.scrollHeight;
+        }
+
+        // Show approval panel
+        function showApprovalPanel(commands, proposalId, privilegedIndices = []) {
+            state.proposalId = proposalId;
+            state.privilegedIndices = privilegedIndices;
+            state.pendingCommands = commands;
+            elements.commandList.innerHTML = '';
+            elements.commandCount.textContent = commands.length;
+
+            commands.forEach((cmd, i) => {
+                const item = document.createElement('div');
+                item.className = 'command-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="cmd${i}">
+                    <label for="cmd${i}" class="command-text">${escapeHtml(cmd)}</label>
+                `;
+                elements.commandList.appendChild(item);
+            });
+
+            elements.approvalOverlay.classList.add('visible');
+            elements.approvalPanel.classList.add('visible');
+        }
+
+        // Hide approval panel
+        function hideApprovalPanel() {
+            elements.approvalOverlay.classList.remove('visible');
+            elements.approvalPanel.classList.remove('visible');
+            state.pendingCommands = [];
+            state.proposalId = null;
+            state.privilegedIndices = [];
+        }
+
+        // Get selected command indices
+        function getSelectedIndices() {
+            const indices = [];
+            state.pendingCommands.forEach((_, i) => {
+                const checkbox = document.getElementById('cmd' + i);
+                if (checkbox && checkbox.checked) {
+                    indices.push(i);
+                }
+            });
+            return indices;
+        }
+
+        // API calls
+        async function apiCall(endpoint, data = null) {
+            const options = {
+                method: data ? 'POST' : 'GET',
+                headers: { 'Content-Type': 'application/json', 'X-Hephestus-Token': operatorToken }
+            };
+            if (data) options.body = JSON.stringify(data);
+
+            try {
+                const response = await fetch('/api/' + endpoint, options);
+                return response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                showToast('API call failed: ' + error.message, 'error');
+                return { error: error.message };
+            }
+        }
+
+        async function submitApproval(decision) {
+            const needsPrivilege = (decision.approved || []).some(i => state.privilegedIndices.includes(i));
+            if (needsPrivilege && window.prompt('Privilege escalation detected. Type yes to approve:') !== 'yes') return false;
+            const result = await apiCall('approve', { ...decision, proposal_id: state.proposalId, confirmed_privilege: needsPrivilege });
+            if (result.error) { showToast(result.error, 'error'); return false; }
+            hideApprovalPanel();
+            return true;
+        }
+
+        // Start run
+        async function startRun() {
+            const goal = elements.goalInput.value.trim();
+            if (!goal) {
+                showToast('Please enter a task goal', 'warning');
+                elements.goalInput.focus();
+                return;
+            }
+
+            const context = elements.contextInput.value.trim();
+
+            state.logsStarted = false;
+            state.steps = 0;
+            state.runId = null;
+            elements.stepsInfo.textContent = '0 / ' + state.maxSteps;
+            elements.runIdInfo.textContent = '-';
+
+            const result = await apiCall('start', { goal, context });
+            if (result.error) {
+                showToast(result.error, 'error');
+                return;
+            }
+
+            showToast('Task started', 'success');
+            connectStream();
+        }
+
+        // Stop run
+        async function stopRun() {
+            const result = await apiCall('stop', {});
+            if (result.error) { showToast(result.error, 'error'); return; }
+            hideApprovalPanel();
+            showToast('Stop requested. Local inference may need to finish; no later commands will run.', 'warning');
+        }
+
+        // Approve selected
+        async function approveSelected() {
+            const indices = getSelectedIndices();
+            if (indices.length === 0) {
+                showToast('No commands selected', 'warning');
+                return;
+            }
+            await submitApproval({ approved: indices });
+        }
+
+        // Approve all
+        async function approveAll() {
+            const indices = state.pendingCommands.map((_, i) => i);
+            await submitApproval({ approved: indices });
+        }
+
+        // Reject all
+        async function rejectAll() {
+            await submitApproval({ reject_all: true });
+        }
+
+        // Abort
+        async function abort() {
+            if (!await submitApproval({ abort: true })) return;
+            showToast('Run aborted', 'error');
+        }
+
+        // Update goal
+        async function updateGoal() {
+            const newInstructions = elements.goalUpdateInput.value.trim();
+            if (!newInstructions) {
+                showToast('Enter updated instructions first', 'warning');
+                elements.goalUpdateInput.focus();
+                return;
+            }
+            const accepted = await submitApproval({ update_goal: newInstructions });
+            if (!accepted) return;
+            elements.goalUpdateInput.value = '';
+            hideApprovalPanel();
+            showToast('Goal updated - replanning...', 'info');
+        }
+
+        // Clear logs
+        function clearLogs() {
+            state.logsStarted = false;
+            elements.logContent.innerHTML = `
+                <div class="log-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <p>No activity yet</p>
+                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a task goal and click Start to begin</p>
+                </div>
+            `;
+        }
+
+        // Connect to SSE stream
+        function connectStream() {
+            if (state.eventSource) {
+                state.eventSource.close();
+            }
+
+            state.eventSource = new EventSource('/api/stream');
+
+            state.eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'status') {
+                    updateStatus(data.status);
+
+                    if (data.status === 'waiting_for_user' && data.pending_commands && data.pending_commands.length > 0) {
+                        showApprovalPanel(data.pending_commands, data.proposal_id, data.privileged_indices || []);
+                    } else {
+                        hideApprovalPanel();
+                    }
+
+                    if (data.error_message && data.status === 'error') {
+                        addLog({
+                            ts: new Date().toISOString(),
+                            event: 'error',
+                            data: { message: data.error_message }
+                        });
+                    }
+
+                    if (data.status === 'completed' || data.status === 'error') {
+                        const completedStream = state.eventSource;
+                        setTimeout(() => {
+                            completedStream?.close();
+                            if (state.eventSource === completedStream) {
+                                state.eventSource = null;
+                            }
+                        }, 1000);
+                    }
+                } else if (data.type === 'log') {
+                    addLog(data.entry);
+                }
+            };
+
+            state.eventSource.onerror = () => {
+                console.log('SSE connection error');
+            };
+        }
+
+        // Check LLM status
+        async function checkLLMStatus() {
+            const result = await apiCall('state');
+            if (result.llm_reachable === true) {
+                elements.llmStatus.textContent = 'Available';
+                elements.llmStatus.className = 'info-badge connected';
+            } else if (result.llm_reachable === false) {
+                elements.llmStatus.textContent = 'Not configured';
+                elements.llmStatus.className = 'info-badge disconnected';
+            } else {
+                elements.llmStatus.textContent = 'Unknown';
+                elements.llmStatus.className = 'info-badge unknown';
+            }
+
+            if (result.backend) {
+                elements.backendInfo.textContent = result.backend;
+            }
+
+            if (result.max_steps) {
+                state.maxSteps = result.max_steps;
+                elements.stepsInfo.textContent = `${state.steps} / ${state.maxSteps}`;
+            }
+        }
+
+        // Toggle sidebar (mobile)
+        function toggleSidebar() {
+            elements.sidebar.classList.toggle('open');
+        }
+
+        // Toggle help modal
+        function toggleHelpModal(show) {
+            elements.helpModal.classList.toggle('visible', show);
+        }
+
+        // Event listeners
+        elements.startBtn.addEventListener('click', startRun);
+        elements.stopBtn.addEventListener('click', stopRun);
+        elements.clearLogsBtn.addEventListener('click', clearLogs);
+        elements.clearLogsBtnHeader.addEventListener('click', clearLogs);
+        elements.refreshBtn.addEventListener('click', () => {
+            checkLLMStatus();
+            showToast('State refreshed', 'success');
+        });
+        elements.approveSelectedBtn.addEventListener('click', approveSelected);
+        elements.approveAllBtn.addEventListener('click', approveAll);
+        elements.rejectAllBtn.addEventListener('click', rejectAll);
+        elements.abortBtn.addEventListener('click', abort);
+        elements.updateGoalBtn.addEventListener('click', updateGoal);
+        elements.goalUpdateInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') updateGoal();
+        });
+        elements.helpBtn.addEventListener('click', () => toggleHelpModal(true));
+        elements.helpModalClose.addEventListener('click', () => toggleHelpModal(false));
+        elements.helpModal.addEventListener('click', (e) => {
+            if (e.target === elements.helpModal) toggleHelpModal(false);
+        });
+        elements.menuBtn?.addEventListener('click', toggleSidebar);
+        elements.approvalOverlay.addEventListener('click', () => {});
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+Enter to start
+            if (e.ctrlKey && e.key === 'Enter' && !elements.startBtn.disabled) {
+                e.preventDefault();
+                startRun();
+            }
+
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                if (elements.helpModal.classList.contains('visible')) {
+                    toggleHelpModal(false);
+                }
+            }
+
+            // A to approve all (when panel open)
+            if (e.key === 'a' && elements.approvalPanel.classList.contains('visible') && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                approveAll();
+            }
+
+            // R to reject all (when panel open)
+            if (e.key === 'r' && elements.approvalPanel.classList.contains('visible') && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                rejectAll();
+            }
+        });
+
+        // Initialize
+        async function init() {
+            const data = await apiCall('state');
+            updateStatus(data.status);
+
+            if (data.status === 'waiting_for_user' && data.pending_commands && data.pending_commands.length > 0) {
+                showApprovalPanel(data.pending_commands, data.proposal_id, data.privileged_indices || []);
+                connectStream();
+            } else if (data.status === 'running' || data.status === 'stopping') {
+                connectStream();
+            }
+
+            checkLLMStatus();
+        }
+
+        async function authenticateAndInit() {
+            const result = await apiCall('session', {});
+            if (result.error) {
+                elements.startBtn.disabled = true;
+                elements.llmStatus.textContent = 'Open the private URL from the terminal';
+                showToast(result.error, 'error');
+                return;
+            }
+            await init();
+        }
+        authenticateAndInit();
+    </script>
+</body>
+</html>
