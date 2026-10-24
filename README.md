@@ -1,5 +1,7 @@
 # Hephestus Agent
 
+<img width="1270" height="715" alt="Hephestus Logo" src="https://github.com/user-attachments/assets/958a405c-36ca-488d-8f69-786f9ed6a84f" />
+
 A supervised local LLM command agent developed as a master's cybersecurity project.
 
 Hephestus explores how a local language model can propose security research commands while an operator reviews each proposal. It combines local GGUF inference, configurable policy checks, explicit approval, local or SSH execution, and JSONL audit logs. A terminal interface and a local browser interface use the same agent loop.
