@@ -1,7 +1,8 @@
-# Direct dependencies verified against PyPI on 2026-10-24.
+# Direct runtime dependencies. See SECURITY.md for dependency limitations.
 click==8.5.0
 rich==15.0.0
 PyYAML==6.0.3
 Flask==3.1.3
-paramiko==5.1.0
+cryptography==50.0.0
 llama-cpp-python==0.3.36
+reportlab==4.2.5

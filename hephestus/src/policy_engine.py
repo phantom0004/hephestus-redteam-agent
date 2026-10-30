@@ -1,23 +1,13 @@
-import os
 import re
+import os
 
 from hephestus import config
-
-# File-based kill switch: dropping a file named HEPHESTUS_STOP in cwd or
-# the log directory causes an immediate graceful halt of the agent loop.
-KILL_SWITCH_FILENAME = "HEPHESTUS_STOP"
-_kill_requested = False  # Programmatic kill switch (set via request_stop())
 
 # OS-specific blocked primitives: these low-level commands could cause
 # irreversible damage (disk wipe, format, reboot). The policy engine
 # selects the appropriate list based on TARGET_OS config.
 LINUX_BLOCKED_PRIMITIVES = ["dd", "mkfs", "reboot", "shutdown"]
 WINDOWS_BLOCKED_PRIMITIVES = ["format", "diskpart", "bcdedit"]
-
-
-def request_stop() -> None:
-    global _kill_requested
-    _kill_requested = True
 
 
 def detect_target_os() -> str:
@@ -65,10 +55,19 @@ def check_policy(command: str) -> tuple[bool, str | None]:
     """Validate a command against the layered safety policy.
 
     Evaluation order (first match wins):
-      1. Max command length  â€” rejects suspiciously long commands
-      2. Allowlist (if set)  â€” only explicitly permitted patterns pass
-      3. Blocked primitives  â€” OS-aware dangerous command names
-      4. Denylist regexes    â€” catch dangerous patterns (rm -rf /, fork bombsâ€¦)
+      Structural checks (ALWAYS run, not affected by COMMAND_POLICY):
+        1. Max command length  - rejects suspiciously long commands
+        2. Control characters   - rejects bidi/control-char smuggling
+        3. Unfinished placeholder ("...") - rejects truncated proposals
+        4. PowerShell syntax    - rejects commands that would not parse
+      Dangerous-command policy (only when config.COMMAND_POLICY is enabled):
+        5. Allowlist (if set)  - only explicitly permitted patterns pass
+        6. Blocked primitives  - OS-aware dangerous command names
+        7. Denylist regexes    - catch dangerous patterns (rm -rf /, fork bombs)
+
+    The dangerous-command policy can be turned off globally (for minor
+    engagements or tests); the structural checks and the operator's human
+    approval gate remain in force regardless.
 
     Returns (allowed: bool, reason: str | None).
     """
@@ -76,6 +75,27 @@ def check_policy(command: str) -> tuple[bool, str | None]:
         return False, (
             f"Command exceeds max length ({len(command)} > {config.POLICY_MAX_COMMAND_LENGTH})"
         )
+
+    if re.search(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u202A-\u202E\u2066-\u2069]", command):
+        return False, "Command contains unsupported control characters"
+
+    if "..." in command or "…" in command:
+        return False, "Command contains an unfinished placeholder"
+
+    if config.BACKEND == "relay" or os.name == "nt":
+        from hephestus.src.command_validation import powershell_syntax_error
+        error = powershell_syntax_error(command)
+        if error:
+            return False, error
+
+    # Everything above is structural validity (length, control characters,
+    # unfinished placeholders, PowerShell syntax) and always runs so a command
+    # stays well-formed. Everything below is the dangerous-command policy
+    # (allowlist / blocked primitives / denylist), which the operator can
+    # disable globally for minor engagements or tests. When it is off, the human
+    # approval gate remains the backstop for dangerous commands.
+    if not config.COMMAND_POLICY:
+        return True, None
 
     if config.POLICY_ALLOWLIST:
         allow_match = False
@@ -91,7 +111,11 @@ def check_policy(command: str) -> tuple[bool, str | None]:
 
     blocked_primitives = _get_blocked_primitives()
     for primitive in blocked_primitives:
-        pattern = r"\b" + re.escape(primitive) + r"\b"
+        # Match the primitive only as a standalone command token: not preceded by
+        # '-', '.' or a word char (so '-Format', '.Format', 'Reformat' are safe)
+        # and not followed by '-' or a word char (so 'Format-Table', 'formatting'
+        # are safe). The real destructive 'format C:' / 'diskpart' still matches.
+        pattern = r"(?<![-.\w])" + re.escape(primitive) + r"(?![-\w])"
         if re.search(pattern, command, re.IGNORECASE):
             return False, f"Command uses blocked primitive: {primitive}"
 
@@ -106,22 +130,7 @@ def check_policy(command: str) -> tuple[bool, str | None]:
 
 
 def check_kill_switch() -> bool:
-    """
-    Checks for immediate stop signals.
-    1. File-based: 'HEPHESTUS_STOP' in cwd or log_dir.
-    """
-    if _kill_requested:
-        return True
-    # Check CWD
-    if os.path.exists(KILL_SWITCH_FILENAME):
-        return True
-
-    # Check Log Dir if it exists
-    if config.LOG_DIR and os.path.exists(
-        os.path.join(config.LOG_DIR, KILL_SWITCH_FILENAME)
-    ):
-        return True
-
+    """Legacy compatibility hook; active runs use their in-memory stop event."""
     return False
 
 

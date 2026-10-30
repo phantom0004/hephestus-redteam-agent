@@ -1,1781 +1,449 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hephestus Agent</title>
-    <style>
-        :root {
-            --bg-primary: #0f0f17;
-            --bg-secondary: #1a1a27;
-            --bg-tertiary: #252536;
-            --bg-elevated: #2d2d42;
-            --text-primary: #f0f0f5;
-            --text-secondary: #9898a6;
-            --text-muted: #6b6b7a;
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
-            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            --success: #10b981;
-            --success-bg: rgba(16, 185, 129, 0.15);
-            --warning: #f59e0b;
-            --warning-bg: rgba(245, 158, 11, 0.15);
-            --error: #ef4444;
-            --error-bg: rgba(239, 68, 68, 0.15);
-            --border: rgba(255, 255, 255, 0.08);
-            --border-strong: rgba(255, 255, 255, 0.15);
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-            --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 16px;
-            --transition-fast: 0.15s ease;
-            --transition-normal: 0.25s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.5;
-        }
-
-        /* Layout */
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .sidebar-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--accent-gradient);
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .logo-text {
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .logo-version {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        /* Status Panel */
-        .status-panel {
-            padding: 1.25rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .status-panel h3 {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1rem;
-            background: var(--bg-tertiary);
-            border-radius: var(--radius-md);
-            margin-bottom: 0.75rem;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--text-muted);
-            flex-shrink: 0;
-        }
-
-        .status-dot.idle { background: var(--text-muted); }
-        .status-dot.running {
-            background: var(--accent-primary);
-            animation: pulse 2s infinite;
-        }
-        .status-dot.waiting_for_user {
-            background: var(--warning);
-            animation: pulse 1s infinite;
-        }
-        .status-dot.completed { background: var(--success); }
-        .status-dot.error { background: var(--error); }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
-            50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
-        }
-
-        .status-text {
-            flex: 1;
-        }
-
-        .status-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .status-value {
-            font-size: 0.9rem;
-            font-weight: 500;
-            text-transform: capitalize;
-        }
-
-        /* System Info */
-        .system-info {
-            padding: 1.25rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .system-info h3 {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
-        }
-
-        .info-label {
-            color: var(--text-secondary);
-        }
-
-        .info-value {
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-        }
-
-        .info-badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 9999px;
-            font-size: 0.7rem;
-            font-weight: 500;
-        }
-
-        .info-badge.connected {
-            background: var(--success-bg);
-            color: var(--success);
-        }
-
-        .info-badge.disconnected {
-            background: var(--error-bg);
-            color: var(--error);
-        }
-
-        .info-badge.unknown {
-            background: var(--bg-tertiary);
-            color: var(--text-muted);
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            padding: 1.25rem;
-            margin-top: auto;
-            border-top: 1px solid var(--border);
-        }
-
-        .quick-actions h3 {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
-
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: var(--transition-fast);
-            margin-bottom: 0.5rem;
-        }
-
-        .action-btn:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border-color: var(--border-strong);
-        }
-
-        .action-btn svg {
-            width: 18px;
-            height: 18px;
-            opacity: 0.7;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Header */
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1.5rem;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .header-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.625rem 1.25rem;
-            border-radius: var(--radius-sm);
-            border: none;
-            font-family: inherit;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition-fast);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .btn-primary {
-            background: var(--accent-gradient);
-            color: white;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: var(--bg-elevated);
-            border-color: var(--border-strong);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            filter: brightness(1.1);
-        }
-
-        .btn-danger {
-            background: var(--error);
-            color: white;
-        }
-
-        .btn-danger:hover:not(:disabled) {
-            filter: brightness(1.1);
-        }
-
-        .btn-warning {
-            background: var(--warning);
-            color: #000;
-        }
-
-        .btn-warning:hover:not(:disabled) {
-            filter: brightness(1.1);
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-secondary);
-        }
-
-        .btn-ghost:hover:not(:disabled) {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .btn-sm {
-            padding: 0.5rem 0.875rem;
-            font-size: 0.8rem;
-        }
-
-        /* Content Area */
-        .content-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem;
-            gap: 1.5rem;
-            overflow-y: auto;
-        }
-
-        /* Task Card */
-        .task-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .task-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .task-card-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .task-card-title svg {
-            width: 20px;
-            height: 20px;
-            color: var(--accent-primary);
-        }
-
-        .task-card-body {
-            padding: 1.25rem;
-        }
-
-        /* Form Elements */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .form-input,
-        .form-textarea {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 0.9rem;
-            transition: var(--transition-fast);
-        }
-
-        .form-input:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-        }
-
-        .form-input::placeholder,
-        .form-textarea::placeholder {
-            color: var(--text-muted);
-        }
-
-        .form-input:disabled,
-        .form-textarea:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-            font-family: inherit;
-        }
-
-        .form-textarea.context {
-            min-height: 80px;
-        }
-
-        .form-hint {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.4rem;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.25rem;
-        }
-
-        /* Log Section */
-        .log-card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 400px;
-        }
-
-        .log-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            line-height: 1.6;
-            background: var(--bg-primary);
-            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-        }
-
-        .log-entry {
-            padding: 0.75rem;
-            border-radius: var(--radius-sm);
-            margin-bottom: 0.5rem;
-            background: var(--bg-tertiary);
-            border-left: 3px solid var(--border);
-            transition: var(--transition-fast);
-        }
-
-        .log-entry:hover {
-            background: var(--bg-elevated);
-        }
-
-        .log-entry:last-child {
-            margin-bottom: 0;
-        }
-
-        .log-entry.event-run_started { border-left-color: var(--accent-primary); }
-        .log-entry.event-planner_output { border-left-color: var(--accent-secondary); }
-        .log-entry.event-proposed_commands { border-left-color: var(--warning); }
-        .log-entry.event-execution_result { border-left-color: var(--success); }
-        .log-entry.event-error { border-left-color: var(--error); }
-        .log-entry.event-run_completed { border-left-color: var(--success); }
-
-        .log-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .log-time {
-            color: var(--text-muted);
-            font-size: 0.7rem;
-        }
-
-        .log-event {
-            font-weight: 500;
-            font-size: 0.75rem;
-            padding: 0.15rem 0.5rem;
-            border-radius: 9999px;
-            background: var(--bg-secondary);
-        }
-
-        .log-event.event-run_started { color: var(--accent-primary); }
-        .log-event.event-planner_output { color: var(--accent-secondary); }
-        .log-event.event-proposed_commands { color: var(--warning); }
-        .log-event.event-execution_result { color: var(--success); }
-        .log-event.event-error { color: var(--error); }
-        .log-event.event-run_completed { color: var(--success); }
-
-        .log-data {
-            color: var(--text-secondary);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .log-data.markdown-rendered {
-            white-space: normal;
-        }
-
-        .log-data.markdown-rendered h1,
-        .log-data.markdown-rendered h2,
-        .log-data.markdown-rendered h3 {
-            color: var(--text-primary);
-            margin: 0.75rem 0 0.4rem 0;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .log-data.markdown-rendered h1 { font-size: 1.1rem; }
-        .log-data.markdown-rendered h2 { font-size: 1rem; }
-        .log-data.markdown-rendered h3 { font-size: 0.9rem; }
-
-        .log-data.markdown-rendered p {
-            margin: 0.4rem 0;
-        }
-
-        .log-data.markdown-rendered code {
-            background: var(--bg-primary);
-            color: var(--accent-primary);
-            padding: 0.15rem 0.4rem;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85em;
-        }
-
-        .log-data.markdown-rendered pre {
-            background: var(--bg-primary);
-            padding: 0.75rem;
-            border-radius: var(--radius-sm);
-            overflow-x: auto;
-            margin: 0.5rem 0;
-        }
-
-        .log-data.markdown-rendered pre code {
-            background: none;
-            padding: 0;
-        }
-
-        .log-data.markdown-rendered ul,
-        .log-data.markdown-rendered ol {
-            margin: 0.4rem 0;
-            padding-left: 1.5rem;
-        }
-
-        .log-data.markdown-rendered li {
-            margin: 0.2rem 0;
-        }
-
-        .log-data.markdown-rendered strong {
-            color: var(--text-primary);
-        }
-
-        .log-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-muted);
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .log-empty svg {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .log-empty p {
-            font-size: 0.9rem;
-        }
-
-        /* Approval Panel */
-        .approval-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 99;
-            opacity: 0;
-            visibility: hidden;
-            transition: var(--transition-normal);
-        }
-
-        .approval-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .approval-panel {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            border-top: 2px solid var(--warning);
-            padding: 1.5rem 2rem;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
-            max-height: 60vh;
-            overflow-y: auto;
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
-        }
-
-        .approval-panel.visible {
-            transform: translateY(0);
-        }
-
-        .approval-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .approval-header svg {
-            width: 24px;
-            height: 24px;
-            color: var(--warning);
-        }
-
-        .approval-header h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--warning);
-        }
-
-        .approval-header .count {
-            background: var(--warning-bg);
-            color: var(--warning);
-            padding: 0.2rem 0.6rem;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .command-list {
-            margin-bottom: 1.25rem;
-        }
-
-        .command-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.875rem;
-            padding: 1rem;
-            background: var(--bg-primary);
-            border-radius: var(--radius-sm);
-            margin-bottom: 0.5rem;
-            border: 1px solid var(--border);
-            transition: var(--transition-fast);
-        }
-
-        .command-item:hover {
-            border-color: var(--border-strong);
-        }
-
-        .command-item input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: var(--accent-primary);
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-
-        .command-text {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--text-primary);
-            flex: 1;
-            word-break: break-all;
-            line-height: 1.5;
-        }
-
-        .approval-actions {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        /* Help Modal */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            z-index: 200;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: var(--transition-normal);
-        }
-
-        .modal-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            transform: scale(0.95);
-            transition: transform 0.2s ease;
-        }
-
-        .modal-overlay.visible .modal {
-            transform: scale(1);
-        }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: var(--radius-sm);
-            transition: var(--transition-fast);
-        }
-
-        .modal-close:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-            overflow-y: auto;
-            max-height: calc(80vh - 70px);
-        }
-
-        .help-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .help-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .help-section h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--accent-primary);
-            margin-bottom: 0.75rem;
-        }
-
-        .help-section p,
-        .help-section li {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .help-section ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .help-section li {
-            padding: 0.4rem 0;
-            padding-left: 1.25rem;
-            position: relative;
-        }
-
-        .help-section li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0.85rem;
-            width: 6px;
-            height: 6px;
-            background: var(--accent-primary);
-            border-radius: 50%;
-        }
-
-        .kbd {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-        }
-
-        /* Utilities */
-        .hidden {
-            display: none !important;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-primary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--bg-elevated);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                top: 0;
-                bottom: 0;
-                z-index: 50;
-                transition: left 0.3s ease;
-            }
-
-            .sidebar.open {
-                left: 0;
-            }
-
-            .mobile-header {
-                display: flex !important;
-            }
-        }
-
-        .mobile-header {
-            display: none;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .menu-btn {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            cursor: pointer;
-            padding: 0.5rem;
-        }
-
-        /* Toast Notifications */
-        .toast-container {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 300;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .toast {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1.25rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .toast.success { border-left: 3px solid var(--success); }
-        .toast.error { border-left: 3px solid var(--error); }
-        .toast.warning { border-left: 3px solid var(--warning); }
-
-        .toast-message {
-            font-size: 0.85rem;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hephestus</title>
+  <style>
+    :root{
+      --bg:#070c17;--panel:#0f1a2c;--panel2:#152339;--panel3:#1b2c48;
+      --ink:#eef5ff;--muted:#8fa3c4;--faint:#64789c;--line:#26374f;--line2:#314566;
+      --blue:#5f9eff;--blue2:#8ab8ff;--violet:#a08bff;--green:#51d99f;--amber:#ffbd61;--red:#ff7184;
+      --radius:14px;--radius-sm:10px;
+      --shadow:0 10px 30px #0004;--shadow-lg:0 22px 60px #0007;
+      --grad-primary:linear-gradient(135deg,#5f9eff,#8f77ff);
+      --sidebar-w:264px;--rail-w:420px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(900px 560px at 0 -5%,#18315a66,transparent 60%),radial-gradient(760px 480px at 100% -5%,#33265866,transparent 62%),var(--bg);color:var(--ink);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+    button,input,textarea,select{font:inherit}
+    button{color:inherit}
+    ::selection{background:#5f9eff44}
+    :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+    a{color:var(--blue2)}
+
+    /* ---------- Top bar ---------- */
+    .topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;height:62px;padding:0 20px;border-bottom:1px solid var(--line);background:#070c17d9;backdrop-filter:blur(16px)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .nav{display:flex;gap:4px;margin-left:12px}
+    .nav button{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;background:none;padding:8px 12px;color:var(--muted);cursor:pointer;font-weight:650;transition:.16s}
+    .nav button svg{width:16px;height:16px}
+    .nav button:hover{color:var(--ink);background:#789cff14}
+    .nav button.active{color:var(--ink);background:#789cff24}
+    .actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+    .status{display:flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:99px;padding:6px 11px;color:var(--muted);font-size:12px;text-transform:capitalize;white-space:nowrap}
+    .dot{width:7px;height:7px;border-radius:50%;background:#73839e;transition:.2s}
+    .status.running .dot,.status.preparing .dot,.status.stopping .dot{background:var(--blue);animation:pulse 1.5s infinite}
+    .status.waiting_for_user .dot{background:var(--amber);animation:pulse .85s infinite}
+    .status.completed .dot{background:var(--green)}
+    .status.error .dot{background:var(--red)}
+
+    .btn{display:inline-flex;justify-content:center;align-items:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2);cursor:pointer;font-weight:700;transition:.16s}
+    .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#8ab8ff88;background:var(--panel3)}
+    .btn:active:not(:disabled){transform:translateY(0)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn svg{width:16px;height:16px}
+    .btn.primary{border:0;background:var(--grad-primary);box-shadow:0 8px 22px #6f82ff40;color:#fff}
+    .btn.danger{border-color:#ff718466;background:#ff71841e;color:#ffdfe5}
+    .btn.ghost{background:transparent}
+    .btn.sm{min-height:32px;padding:0 10px;font-size:12px}
+    .icon-btn{display:grid;place-items:center;min-height:38px;width:38px;padding:0}
+
+    /* ---------- App shell ---------- */
+    .shell{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);min-height:calc(100vh - 62px)}
+    .view{display:none}
+    .view.active{display:block;animation:enter .22s ease}
+
+    /* ---------- Session sidebar ---------- */
+    .sidebar{position:sticky;top:62px;display:flex;flex-direction:column;height:calc(100vh - 62px);border-right:1px solid var(--line);background:linear-gradient(180deg,#0e1a2df2,#0a1322f2)}
+    .sidebar-head{display:flex;align-items:center;gap:8px;padding:14px 14px 10px}
+    .sidebar-head .label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+    .sidebar-head .label svg{width:14px;height:14px}
+    .new-session{margin:0 12px 10px;width:calc(100% - 24px)}
+    .session-list{flex:1;overflow:auto;padding:4px 8px 14px;scrollbar-width:thin;scrollbar-color:#38506f #0a1322}
+    .session-list::-webkit-scrollbar{width:9px}
+    .session-list::-webkit-scrollbar-thumb{border:2px solid #0a1322;border-radius:99px;background:#38506f}
+    .session-empty{padding:16px 10px;color:var(--faint);font-size:12px;text-align:center}
+    .session-item{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:start;margin:3px 0;padding:10px 10px;border:1px solid transparent;border-radius:11px;cursor:pointer;transition:.15s;animation:enter .2s ease}
+    .session-item:hover{background:#6f93ff12;border-color:#6f93ff33}
+    .session-item.selected{background:#6f93ff1f;border-color:#7ba1ff66}
+    .session-item .sdot{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--faint)}
+    .session-item[data-status=running] .sdot,.session-item[data-status=waiting_for_user] .sdot,.session-item[data-status=stopping] .sdot{background:var(--amber);box-shadow:0 0 0 3px #ffbd6122}
+    .session-item[data-status=completed] .sdot{background:var(--green)}
+    .session-item[data-status=error] .sdot{background:var(--red)}
+    .session-main{min-width:0}
+    .session-title{display:block;overflow:hidden;font-size:13px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
+    .session-meta{display:block;margin-top:2px;overflow:hidden;color:var(--faint);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .session-badge{display:inline-block;margin-left:6px;padding:0 6px;border-radius:99px;background:#5f9eff22;color:var(--blue2);font-size:10px;font-weight:700;vertical-align:middle}
+    .session-rowactions{display:flex;gap:2px;margin-top:7px}
+    .session-rowactions button{display:grid;place-items:center;width:26px;height:26px;border:1px solid transparent;border-radius:7px;background:#ffffff08;color:var(--muted);cursor:pointer;transition:.14s}
+    .session-rowactions button:hover{color:#fff;border-color:#7ba1ff66;background:#6f93ff22}
+    .session-rowactions button.del:hover{color:#ffdfe5;border-color:#ff718466;background:#ff71841e}
+    .session-rowactions svg{width:14px;height:14px}
+    .session-rename{margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--blue);border-radius:8px;background:#050b16;color:var(--ink);font-size:12px}
+
+    /* ---------- Main region ---------- */
+    .main{min-width:0;padding:22px}
+    .workspace{display:grid;grid-template-columns:minmax(0,1fr) var(--rail-w);gap:20px;align-items:start;max-width:1500px;margin:0 auto}
+    .canvas{display:grid;gap:18px;min-width:0}
+
+    .card{overflow:hidden;border:1px solid var(--line);border-radius:var(--radius);background:#0f1a2ce6;box-shadow:var(--shadow)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;border-bottom:1px solid var(--line)}
+    .title{display:flex;align-items:center;gap:9px;font-weight:720;letter-spacing:-.01em}
+    .title svg{width:18px;height:18px;color:var(--blue2)}
+    .subtle{color:var(--muted);font-size:12px}
+    .card-body{padding:17px}
+    .goal{background:linear-gradient(130deg,#2b4a8044,#0f1a2cf0 56%,#52409233)}
+
+    label{display:block;margin-bottom:7px;color:#c9d8f1;font-weight:650;font-size:12px}
+    textarea,input[type=number],input[type=text],select{width:100%;padding:11px 12px;border:1px solid var(--line2);border-radius:var(--radius-sm);background:#050b16a8;color:var(--ink);resize:vertical;transition:.15s}
+    textarea:focus,input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #5f9eff26}
+    #goalInput{min-height:78px;font-size:15px}
+    #contextInput{min-height:44px}
+    .field-gap{margin-top:11px}
+
+    .composer-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+    .composer-control{display:flex;align-items:center;gap:11px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#050b1666}
+    .composer-control>.cc-label{display:inline-flex;align-items:center;gap:7px;margin:0;color:var(--muted);font-size:12px;font-weight:650;white-space:nowrap}
+    .composer-control>.cc-label svg{width:15px;height:15px;color:var(--faint)}
+    .seg{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#0a1322}
+    .seg button{min-height:28px;padding:0 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-weight:700;transition:.14s}
+    .seg button:hover:not(:disabled){color:#fff;background:#6f93ff1c}
+    .seg button.selected{color:#fff;border-color:#85adff77;background:#6f93ff2e}
+    .seg button[data-level=deep].selected,.seg button[data-mode=quick].selected{border-color:#ffbd6188;background:#ffbd611f;color:#ffe3b2}
+    .seg button[data-mode=goal].selected{border-color:#85adff88}
+    .seg button:disabled{opacity:.45;cursor:not-allowed}
+
+    .formfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;flex-wrap:wrap}
+    .formactions{display:flex;gap:9px;margin-left:auto}
+
+    /* progress */
+    .progress{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:15px;padding:15px 18px}
+    .ring{position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:conic-gradient(var(--blue) 0deg,#2a3b59 0deg)}
+    .ring:after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--panel)}
+    .ring.working{animation:breathe 1.9s ease-in-out infinite}
+    .ring strong{z-index:1;font-size:11px}
+    .progress .pmain strong{display:block;font-size:13px}
+    .progress .pmain span{color:var(--muted);font-size:12px}
+    .steps{font:12px ui-monospace,monospace;color:#b7c7df;text-align:right;white-space:nowrap}
+
+    .request{min-height:48px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .command{border-color:#ffbd6155;background:linear-gradient(120deg,#5e441c33,#0f1a2cf0)}
+    .command .title svg{color:var(--amber)}
+    .code{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#eaf3ff;font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+    #commandValue{min-height:52px;max-height:240px;overflow:auto}
+    .empty{color:var(--muted);font-style:italic}
+
+    /* evidence console */
+    .evidence{border-color:#51d99f4d}
+    .evidence .card-head{position:sticky;top:0;z-index:2;background:#0e1c28f2;backdrop-filter:blur(6px)}
+    .evidence .title svg{color:var(--green)}
+    .count-pill{min-width:22px;padding:1px 8px;border:1px solid var(--line2);border-radius:99px;background:#0a1322;color:var(--muted);font-size:11px;font-weight:700;text-align:center}
+    .evidence-list{display:grid;gap:12px;max-height:560px;overflow:auto;padding:16px;scrollbar-width:thin;scrollbar-color:#38506f #0a1322}
+    .evidence-list::-webkit-scrollbar{width:10px}
+    .evidence-list::-webkit-scrollbar-thumb{border:2px solid #0a1322;border-radius:99px;background:#38506f}
+    .evidence-empty{padding:26px 16px;color:var(--muted);font-style:italic;text-align:center}
+    .evi{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0a1220;animation:enter .22s ease}
+    .evi-head{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line);background:#101d30}
+    .evi-idx{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:7px;background:#5f9eff22;color:var(--blue2);font-size:11px;font-weight:800}
+    .evi-cmd{flex:1;min-width:0;overflow:hidden;color:#dbe9ff;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;text-overflow:ellipsis;white-space:nowrap}
+    .evi-time{color:var(--faint);font-size:11px;white-space:nowrap}
+    .exit-badge{padding:1px 8px;border-radius:99px;font-size:11px;font-weight:800;white-space:nowrap}
+    .exit-badge.ok{background:#51d99f1e;color:#8ee6bf;border:1px solid #51d99f55}
+    .exit-badge.bad{background:#ff71841e;color:#ffb3bf;border:1px solid #ff718455}
+    .exit-badge.skip{background:#ffbd611e;color:#ffe0a8;border:1px solid #ffbd6155}
+    .evi-body{margin:0;max-height:320px;overflow:auto;padding:11px 13px;white-space:pre-wrap;overflow-wrap:anywhere;color:#e7f0ff;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .evi-stderr{color:#ffc2cc}
+    .evi-label{display:block;margin:8px 0 2px;color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+    /* activity rail */
+    .rail{position:sticky;top:84px;display:flex;flex-direction:column;height:calc(100vh - 106px);min-height:460px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(165deg,#15233eee,#0c1526ee);box-shadow:var(--shadow-lg);overflow:hidden}
+    .rail-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .railtitle{display:flex;align-items:center;gap:9px;font-weight:720}
+    .railtitle svg{width:17px;height:17px;color:var(--blue2)}
+    .feed{flex:1;overflow-y:auto;padding:12px;scrollbar-width:thin;scrollbar-color:#38506f #0a1322}
+    .feed::-webkit-scrollbar{width:9px}
+    .feed::-webkit-scrollbar-thumb{border:2px solid #0a1322;border-radius:99px;background:#38506f}
+    .activity{display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;padding:10px 7px;border-left:1px solid #70859f3d}
+    .pin{width:8px;height:8px;margin:6px 0 0 -12px;border:2px solid var(--panel);border-radius:50%;background:#8196b8}
+    .planner_output .pin,.planner_request .pin{background:var(--violet)}
+    .proposed_commands .pin{background:var(--amber)}
+    .execution_result .pin,.run_complete .pin{background:var(--green)}
+    .command_dispatch .pin{background:#62b7ff}
+    .policy_decision .pin{background:#9c8cff}
+    .safety_review .pin,.safety_block .pin{background:#ff9f5c}
+    .edit_request .pin,.edited_command .pin{background:#ffd36b}
+    .observation .pin{background:#55d9ad}
+    .error .pin,.run_terminated .pin{background:var(--red)}
+    .activity-name{font-size:12px;font-weight:700;text-transform:capitalize;color:#c9daf4}
+    .activity-time{margin-left:7px;color:var(--faint);font-size:11px}
+    .activity-detail{margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;color:#aebed5;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;user-select:text}
+    .history-banner{margin:2px 0 8px;padding:8px 10px;border:1px solid #ffbd6155;border-radius:9px;background:#ffbd6112;color:#ffe1ad;font-size:11px}
+
+    /* hero + settings handled in workspace.css */
+    .hero{margin:2px 0 20px}
+    .hero h1{margin:0;font-size:26px;letter-spacing:-.04em}
+    .hero p{margin:6px 0 0;color:var(--muted)}
+
+    /* export menu */
+    .menu-wrap{position:relative}
+    .menu{position:absolute;right:0;top:calc(100% + 8px);z-index:50;display:none;min-width:244px;padding:7px;border:1px solid var(--line2);border-radius:13px;background:linear-gradient(160deg,#17263fff,#0c1627ff);box-shadow:var(--shadow-lg)}
+    .menu.open{display:block;animation:pop .16s ease}
+    .menu-label{padding:6px 9px 7px;color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+    .menu-item{display:flex;gap:10px;align-items:flex-start;width:100%;padding:9px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--ink);cursor:pointer;text-align:left;transition:.14s}
+    .menu-item:hover{border-color:#7ba1ff55;background:#6f93ff18}
+    .menu-item svg{width:17px;height:17px;margin-top:1px;color:var(--blue2);flex:none}
+    .menu-item strong{display:block;font-size:13px;font-weight:700}
+    .menu-item span{display:block;color:var(--muted);font-size:11px}
+
+    /* modal */
+    .modalbackdrop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;background:#01050dcc;backdrop-filter:blur(7px)}
+    .modalbackdrop.open{display:flex;animation:fade .15s ease}
+    .modal{width:min(680px,100%);max-height:calc(100vh - 40px);overflow:auto;border:1px solid #aacaff55;border-radius:18px;background:linear-gradient(145deg,#172640,#0d1727);box-shadow:0 24px 80px #000b;animation:pop .2s ease}
+    .modalhead{display:flex;align-items:center;gap:12px;padding:20px 22px 15px;border-bottom:1px solid var(--line)}
+    .modalicon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;color:#291903;background:var(--amber)}
+    .modalicon svg{width:19px}
+    .modal h2{margin:0;font-size:17px}
+    .modal p{margin:3px 0 0;color:var(--muted);font-size:12px}
+    .modalbody{padding:17px 22px}
+    .choice{display:flex;gap:10px;align-items:start;margin:8px 0;padding:11px;border:1px solid var(--line);border-radius:9px;background:#050b1666}
+    .choice input{margin-top:3px;accent-color:var(--blue)}
+    .choice code{overflow-wrap:anywhere;color:#eaf3ff}
+    .modalfoot{display:flex;justify-content:space-between;gap:9px;padding:16px 22px 20px;border-top:1px solid var(--line)}
+    .modalright{display:flex;gap:9px}
+
+
+    .toasts{position:fixed;z-index:70;top:74px;right:18px;display:grid;gap:8px;width:min(360px,calc(100vw - 36px))}
+    .toast{padding:11px 13px;border:1px solid var(--line2);border-radius:10px;background:#182744;box-shadow:var(--shadow-lg);animation:toast .2s ease;font-size:13px}
+    .toast.success{border-color:#51d99f77}
+    .toast.error{border-color:#ff718477}
+
+    .hidden{display:none!important}
+    .sidebar-toggle{display:none}
+
+    @keyframes pulse{50%{opacity:.5;box-shadow:0 0 0 6px #5f9eff00}}
+    @keyframes enter{from{opacity:0;transform:translateY(6px)}}
+    @keyframes fade{from{opacity:0}}
+    @keyframes pop{from{opacity:0;transform:scale(.97) translateY(6px)}}
+    @keyframes toast{from{opacity:0;transform:translateX(12px)}}
+    @keyframes breathe{50%{filter:brightness(1.22);box-shadow:0 0 16px #6b9dff55}}
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <div class="logo-icon">H</div>
-                    <div>
-                        <div class="logo-text">Hephestus</div>
-                        <div class="logo-version">v0.2.0</div>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark"><img src="/assets/brand-mark.png" alt="Hephestus"></span><span class="brand-text"><span class="brand-name">Hephestus</span><span class="brand-sub">Red Team AI</span></span></div>
+  <nav class="nav">
+    <button class="active" data-view="workspaceView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Workspace</button>
+    <button data-view="modelsView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M9 3v4h6V3"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M9 21v-2m3 2v-2m3 2v-2"/></svg>Models<span id="navModelDot" class="nav-dot" data-state="unloaded"></span></button>
+    <button data-view="settingsView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+    <button data-view="helpView">Help</button>
+  </nav>
+  <div class="actions">
+    <button id="sidebarToggle" class="btn ghost icon-btn sidebar-toggle" title="Toggle sessions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <button id="soundToggle" class="btn ghost icon-btn sound-toggle" title="Mute notification sounds" aria-pressed="true"><svg class="snd-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="wave1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="wave2" d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><svg class="snd-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6m0-6 6 6"/></svg></button>
+    <span id="statusPill" class="status idle"><i class="dot"></i><span id="statusText">Idle</span></span>
+    <div class="menu-wrap">
+      <button id="exportBtn" class="btn ghost" title="Export this session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span>Export</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px"><path d="m6 9 6 6 6-6"/></svg></button>
+      <div id="exportMenu" class="menu" role="menu">
+        <div class="menu-label">Export this session</div>
+        <button class="menu-item" data-format="json" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span><strong>Full JSON dump</strong><span>Every command, plan, result and hash — raw.</span></span></button>
+        <button class="menu-item" data-format="pdf" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg><span><strong>PDF evidence report</strong><span>Generic audit report with evidence hashes.</span></span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="workspaceView" class="view active">
+  <section class="connection-bar" aria-label="Execution location">
+    <div class="execution-toggle" role="group" aria-label="Execution mode">
+      <button id="localModeBtn" class="btn active" aria-pressed="true">Local</button>
+      <button id="remoteModeBtn" class="btn" aria-pressed="false">Remote</button>
+    </div>
+    <span id="connectionStatus" role="status">Local · commands and approvals on this computer</span>
+    <button id="connectionGuideBtn" class="btn ghost">Connection guide</button>
+  </section>
+  <div class="shell">
+    <!-- Permanent session sidebar -->
+    <aside id="sessionSidebar" class="sidebar">
+      <div class="sidebar-head">
+        <span class="label"><svg class="ico ico-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path class="dots" d="M8 11h.01M12 11h.01M16 11h.01" stroke-width="2.6" stroke-linecap="round"/></svg>Sessions</span><span class="saved-chip" title="Sessions are saved to the project sessions folder">Saved to disk</span>
+      </div>
+      <button id="newSessionBtn" class="btn primary new-session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New session</button>
+      <div id="sessionList" class="session-list"></div>
+    </aside>
+
+    <div class="main">
+      <div class="workspace">
+        <section class="canvas">
+          <section id="modelDock" class="card model-dock" data-state="unloaded" aria-live="polite">
+            <div class="dock-slot"><div id="dockArt" class="dock-art"></div><span class="dock-ring"></span></div>
+            <div class="dock-main">
+              <span class="dock-kicker"><i class="dock-led"></i><span id="dockState">No model loaded</span></span>
+              <strong id="dockName">Choose a model to begin</strong>
+              <span id="dockMeta" class="dock-meta">The server starts with nothing in memory. Load a model from the library to start tasks or ask questions.</span>
+              <div class="dock-bar"><span></span></div>
+            </div>
+            <div class="dock-actions">
+              <button id="dockUnloadBtn" class="btn sm ghost hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Unload</button>
+              <button id="dockLibraryBtn" class="btn sm primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><rect x="9" y="11" width="6" height="5" rx="1"/></svg><span>Open library</span></button>
+            </div>
+          </section>
+
+          <section class="card goal">
+            <div class="card-head"><div class="title"><svg class="ico ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path class="tick" pathLength="100" d="m8 12 2.5 2.5L16 9"/></svg>Task request</div><span class="subtle">Ctrl + Enter to start</span></div>
+            <div class="card-body">
+              <label for="goalInput">What should Hephestus do?</label>
+              <textarea id="goalInput" placeholder="Describe the authorised task…"></textarea>
+              <div class="field-gap"><label for="contextInput" class="scope-label">Scope &amp; rules of engagement <span class="scope-badge" title="Scope guides planning. Optional AI review can check it; inspect each command before approval.">Review every proposal</span></label><textarea id="contextInput" placeholder="Describe the authorized target and rules, e.g. &quot;This lab computer only&quot; or &quot;Read-only: do not modify files or settings&quot;."></textarea></div>
+              <div class="composer-controls">
+                <div class="composer-control">
+                  <span class="cc-label"><svg class="ico ico-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="trace-bg" d="M3 12h4l3-9 4 18 3-9h4"/><path class="trace" pathLength="100" d="M3 12h4l3-9 4 18 3-9h4"/></svg>Workflow</span>
+                  <div id="taskMode" class="seg" aria-label="Workflow mode">
+                    <button type="button" data-mode="goal" class="selected" title="Iterate from command evidence until completion is justified.">Goal</button>
+                    <button type="button" data-mode="quick" title="Make one approved command attempt, then end the task.">Quick</button>
+                  </div>
+                </div>
+                <div class="thinking-picker" id="thinkingPicker">
+                  <button type="button" id="thinkingDial" class="thinking-dial balanced" aria-haspopup="true" aria-expanded="false" title="Thinking level">
+                    <svg class="gauge" viewBox="0 0 46 28" aria-hidden="true">
+                      <path class="gauge-track" d="M5 24 A18 18 0 0 1 41 24"/>
+                      <path class="gauge-fill" d="M5 24 A18 18 0 0 1 41 24" pathLength="100"/>
+                      <g class="gauge-needle"><line x1="23" y1="24" x2="23" y2="8"/></g>
+                      <circle class="gauge-hub" cx="23" cy="24" r="2.6"/>
+                    </svg>
+                    <span class="dial-text"><span class="dial-caption">Thinking</span><span class="dial-value" id="thinkingDialLabel">Balanced</span></span>
+                    <svg class="dial-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <div class="thinking-pop" id="thinkingPop" role="dialog" aria-label="Thinking level">
+                    <div class="pop-caption">Thinking level</div>
+                    <div id="thinkingLevel" class="think-opts" aria-label="Thinking level">
+                      <button type="button" data-level="quick"><span class="opt-dot"></span><span class="opt-main"><strong>Quick</strong><span>Fast · lower token budget</span></span><svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+                      <button type="button" data-level="balanced" class="selected"><span class="opt-dot"></span><span class="opt-main"><strong>Balanced</strong><span>Recommended default</span></span><svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+                      <button type="button" data-level="deep"><span class="opt-dot"></span><span class="opt-main"><strong>Deep</strong><span>Thorough · more tokens</span></span><svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
                     </div>
+                  </div>
                 </div>
+              </div>
+              <div class="formfoot">
+                <span class="subtle">Commands remain subject to policy and operator approval.</span>
+                <div class="formactions">
+                  <button id="stopBtn" class="btn danger hidden">Stop &amp; disconnect</button>
+                  <button id="startBtn" class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 5 11 7-11 7z"/></svg>Start task</button>
+                </div>
+              </div>
             </div>
+          </section>
 
-            <div class="status-panel">
-                <h3>Agent Status</h3>
-                <div class="status-indicator">
-                    <div class="status-dot" id="statusDot"></div>
-                    <div class="status-text">
-                        <div class="status-label">Current State</div>
-                        <div class="status-value" id="statusText">Idle</div>
-                    </div>
-                </div>
-            </div>
+          <section class="card progress">
+            <div id="progressRing" class="ring"><strong id="completionPercent">0%</strong></div>
+            <div class="pmain"><strong id="progressLabel">Ready for a task</strong><span id="progressHeartbeat">Stage estimate — token generation progress is not exposed.</span></div>
+            <span id="stepCount" class="steps">Stage 0/0</span>
+          </section>
 
-            <div class="system-info">
-                <h3>System Information</h3>
-                <div class="info-item">
-                    <span class="info-label">Backend</span>
-                    <span class="info-value" id="backendInfo">local</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">LLM Status</span>
-                    <span class="info-badge unknown" id="llmStatus">Unknown</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Run ID</span>
-                    <span class="info-value" id="runIdInfo">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Steps</span>
-                    <span class="info-value" id="stepsInfo">0 / 15</span>
-                </div>
-            </div>
+          <section class="card">
+            <div class="card-head"><div class="title"><svg class="ico ico-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path class="dots" d="M8 11h.01M12 11h.01M16 11h.01" stroke-width="2.6" stroke-linecap="round"/></svg>Request sent to the model</div></div>
+            <div class="card-body"><div id="requestEcho" class="request empty">Your submitted task will appear here.</div></div>
+          </section>
 
-            <div class="quick-actions">
-                <h3>Quick Actions</h3>
-                <button class="action-btn" id="helpBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    Help & Shortcuts
-                </button>
-                <button class="action-btn" id="clearLogsBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3,6 5,6 21,6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                    Clear Logs
-                </button>
-                <button class="action-btn" id="refreshBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="23,4 23,10 17,10"/>
-                        <polyline points="1,20 1,14 7,14"/>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                    </svg>
-                    Refresh State
-                </button>
-            </div>
+          <section class="card command">
+            <div class="card-head"><div class="title"><svg class="ico ico-term" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="4" width="19" height="16" rx="2.5" opacity=".45"/><path d="m7 9 3 3-3 3"/><path class="cursor" d="M12.5 15h4.5"/></svg>Latest proposed command</div><span id="commandStatus" class="subtle">Waiting for a plan</span></div>
+            <div class="card-body"><div class="codebox" id="commandBox"><pre id="commandValue" class="code empty">No command proposed yet.</pre></div></div>
+          </section>
+
+          <section class="card evidence">
+            <div class="card-head"><div class="title"><svg class="ico ico-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10v18H7z"/><path class="ln" pathLength="100" d="M10 8h4"/><path class="ln l2" pathLength="100" d="M10 12h4"/><path class="ln l3" pathLength="100" d="M10 16h3"/></svg>Command output log</div><span id="evidenceCount" class="count-pill">0</span></div>
+            <div id="evidenceList" class="evidence-list"><div id="evidenceEmpty" class="evidence-empty">Every executed command and its full output is recorded here, in order, for this session — immutable evidence.</div></div>
+          </section>
+        </section>
+
+        <div class="operator-column">
+        <aside id="activityRail" class="rail">
+          <div class="rail-head">
+            <div class="railtitle"><svg class="ico ico-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="trace-bg" d="M3 12h3l2-7 4 14 2-7h7"/><path class="trace" pathLength="100" d="M3 12h3l2-7 4 14 2-7h7"/></svg>Working view</div>
+            <span id="activityCount" class="count-pill">0</span>
+          </div>
+          <div id="activityFeed" class="feed"><div class="activity"><i class="pin"></i><div><div class="activity-name">Ready</div><div class="activity-detail">Start a task to see the live operator-facing planning trace.</div></div></div></div>
         </aside>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Mobile Header -->
-            <div class="mobile-header">
-                <button class="menu-btn" id="menuBtn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="3" y1="12" x2="21" y2="12"/>
-                        <line x1="3" y1="6" x2="21" y2="6"/>
-                        <line x1="3" y1="18" x2="21" y2="18"/>
-                    </svg>
-                </button>
-                <div class="logo-text">Hephestus</div>
-            </div>
-
-            <!-- Header -->
-            <header class="header">
-                <h1 class="header-title">Command Center</h1>
-                <div class="header-actions">
-                    <button id="stopBtn" class="btn btn-danger hidden">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="6" y="6" width="12" height="12"/>
-                        </svg>
-                        Stop Run
-                    </button>
-                </div>
-            </header>
-
-            <!-- Content -->
-            <div class="content-area">
-                <!-- Task Input Card -->
-                <div class="task-card" id="taskCard">
-                    <div class="task-card-header">
-                        <div class="task-card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                            New Task
-                        </div>
-                    </div>
-                    <div class="task-card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="goalInput">Task Goal</label>
-                            <textarea
-                                id="goalInput"
-                                class="form-textarea"
-                                placeholder="Describe what you want the agent to accomplish..."></textarea>
-                            <div class="form-hint">Be specific about the desired outcome. The agent will plan and execute steps to achieve this goal.</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="contextInput">Additional Context (Optional)</label>
-                            <textarea
-                                id="contextInput"
-                                class="form-textarea context"
-                                placeholder="Provide any relevant context, constraints, or preferences..."></textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button id="startBtn" class="btn btn-primary">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polygon points="5 3 19 12 5 21 5 3"/>
-                                </svg>
-                                Start Task
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Log Card -->
-                <div class="task-card log-card">
-                    <div class="task-card-header">
-                        <div class="task-card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                                <polyline points="10 9 9 9 8 9"/>
-                            </svg>
-                            Activity Log
-                        </div>
-                        <button class="btn btn-ghost btn-sm" id="clearLogsBtnHeader">
-                            Clear
-                        </button>
-                    </div>
-                    <div id="logContent" class="log-content">
-                        <div class="log-empty">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <p>No activity yet</p>
-                            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a task goal and click Start to begin</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
+      </div>
     </div>
+  </div>
+</main>
 
-    <!-- Approval Overlay -->
-    <div class="approval-overlay" id="approvalOverlay"></div>
-
-    <!-- Approval Panel -->
-    <div id="approvalPanel" class="approval-panel">
-        <div class="approval-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <h3>Commands Awaiting Approval</h3>
-            <span class="count" id="commandCount">0</span>
-        </div>
-        <div id="commandList" class="command-list"></div>
-        <div class="approval-actions">
-            <button id="approveSelectedBtn" class="btn btn-success">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Approve Selected
-            </button>
-            <button id="approveAllBtn" class="btn btn-success">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                Approve All
-            </button>
-            <button id="rejectAllBtn" class="btn btn-secondary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                Reject All
-            </button>
-            <button id="abortBtn" class="btn btn-danger">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="6" width="12" height="12"/>
-                </svg>
-                Abort Run
-            </button>
-        </div>
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                Update goal (rejects all commands and replans with new instructions):
-            </label>
-            <div style="display: flex; gap: 0.5rem;">
-                <input type="text" id="goalUpdateInput" placeholder="e.g. use read-only commands and explain the last error..."
-                    style="flex: 1; padding: 0.5rem 0.75rem; background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
-                <button id="updateGoalBtn" class="btn btn-secondary" style="white-space: nowrap;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Update Goal
-                </button>
-            </div>
-        </div>
+<main id="modelsView" class="view">
+  <div class="main"><div class="library">
+    <div class="library-hero">
+      <div class="hero-icon"><svg class="ico ico-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M9 3v4h6V3"/><rect class="core" x="9" y="11" width="6" height="5" rx="1"/><path d="M9 21v-2m3 2v-2m3 2v-2"/></svg></div>
+      <div class="library-copy"><h1>Model library</h1><p>Every GGUF in this project's <code>models</code> folder. Insert one to load it into memory; eject it to free the GPU and RAM. Nothing loads until you choose.</p></div>
+      <div class="library-actions">
+        <button id="libraryRefreshBtn" class="btn ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v4h-4"/></svg>Rescan</button>
+      </div>
     </div>
-
-    <!-- Help Modal -->
-    <div class="modal-overlay" id="helpModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">Help & Keyboard Shortcuts</h2>
-                <button class="modal-close" id="helpModalClose">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="help-section">
-                    <h4>Getting Started</h4>
-                    <p>Hephestus is a supervised research command agent. Commands run with your account permissions; policy checks are not a sandbox. Enter a goal, and the agent will plan and propose commands to achieve it. All commands require your explicit approval before execution.</p>
-                </div>
-                <div class="help-section">
-                    <h4>Keyboard Shortcuts</h4>
-                    <ul>
-                        <li><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> - Start a new task</li>
-                        <li><span class="kbd">Escape</span> - Close modals / Cancel approval</li>
-                        <li><span class="kbd">A</span> - Approve all commands (when approval panel is open)</li>
-                        <li><span class="kbd">R</span> - Reject all commands (when approval panel is open)</li>
-                    </ul>
-                </div>
-                <div class="help-section">
-                    <h4>Safety Features</h4>
-                    <ul>
-                        <li>All commands must be approved before execution</li>
-                        <li>Dangerous commands are blocked by policy</li>
-                        <li>Kill switch: Create a file named HEPHESTUS_STOP to halt immediately</li>
-                        <li>Maximum steps limit prevents runaway execution</li>
-                    </ul>
-                </div>
-                <div class="help-section">
-                    <h4>Local Model</h4>
-                    <p>Hephestus runs the configured GGUF model locally with llama.cpp. Ensure the model file exists and that llama-cpp-python is installed; CUDA-enabled builds use available GPU memory for acceleration.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <script>
-        // The launch capability is carried in the URL fragment, never sent in request URLs.
-        const launchParams = new URLSearchParams(window.location.hash.slice(1));
-        const operatorToken = launchParams.get('token') || sessionStorage.getItem('hephestusToken') || '';
-        if (launchParams.has('token')) {
-            sessionStorage.setItem('hephestusToken', operatorToken);
-            history.replaceState(null, '', window.location.pathname);
-        }
-
-        // State
-        const state = {
-            status: 'idle',
-            proposalId: null,
-            privilegedIndices: [],
-            pendingCommands: [],
-            eventSource: null,
-            runId: null,
-            steps: 0,
-            maxSteps: 15,
-            logsStarted: false
-        };
-
-        // DOM Elements
-        const elements = {
-            // Sidebar
-            sidebar: document.getElementById('sidebar'),
-            statusDot: document.getElementById('statusDot'),
-            statusText: document.getElementById('statusText'),
-            backendInfo: document.getElementById('backendInfo'),
-            llmStatus: document.getElementById('llmStatus'),
-            runIdInfo: document.getElementById('runIdInfo'),
-            stepsInfo: document.getElementById('stepsInfo'),
-
-            // Main
-            goalInput: document.getElementById('goalInput'),
-            contextInput: document.getElementById('contextInput'),
-            startBtn: document.getElementById('startBtn'),
-            stopBtn: document.getElementById('stopBtn'),
-            taskCard: document.getElementById('taskCard'),
-            logContent: document.getElementById('logContent'),
-
-            // Approval
-            approvalOverlay: document.getElementById('approvalOverlay'),
-            approvalPanel: document.getElementById('approvalPanel'),
-            commandList: document.getElementById('commandList'),
-            commandCount: document.getElementById('commandCount'),
-            approveSelectedBtn: document.getElementById('approveSelectedBtn'),
-            approveAllBtn: document.getElementById('approveAllBtn'),
-            rejectAllBtn: document.getElementById('rejectAllBtn'),
-            abortBtn: document.getElementById('abortBtn'),
-            goalUpdateInput: document.getElementById('goalUpdateInput'),
-            updateGoalBtn: document.getElementById('updateGoalBtn'),
-
-            // Actions
-            clearLogsBtn: document.getElementById('clearLogsBtn'),
-            clearLogsBtnHeader: document.getElementById('clearLogsBtnHeader'),
-            refreshBtn: document.getElementById('refreshBtn'),
-            helpBtn: document.getElementById('helpBtn'),
-            menuBtn: document.getElementById('menuBtn'),
-
-            // Modal
-            helpModal: document.getElementById('helpModal'),
-            helpModalClose: document.getElementById('helpModalClose'),
-
-            // Toast
-            toastContainer: document.getElementById('toastContainer')
-        };
-
-        // Toast notification
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<span class="toast-message">${escapeHtml(message)}</span>`;
-            elements.toastContainer.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // Update status display
-        function updateStatus(status) {
-            state.status = status;
-
-            elements.statusDot.className = 'status-dot ' + status;
-            elements.statusText.textContent = status.replace(/_/g, ' ');
-
-            const isActive = status === 'running' || status === 'waiting_for_user' || status === 'stopping';
-            elements.startBtn.disabled = isActive;
-            elements.stopBtn.classList.toggle('hidden', !isActive);
-            elements.goalInput.disabled = isActive;
-            elements.contextInput.disabled = isActive;
-
-            if (status === 'completed') {
-                showToast('Run ended. Review the output; the goal is not automatically verified.', 'info');
-            } else if (status === 'error') {
-                showToast('Task failed with an error', 'error');
-            }
-        }
-
-        // Update system info
-        function updateSystemInfo(data) {
-            if (data.run_id) {
-                state.runId = data.run_id;
-                elements.runIdInfo.textContent = data.run_id.substring(0, 8) + '...';
-            }
-            if (data.step !== undefined) {
-                state.steps = data.step;
-                elements.stepsInfo.textContent = `${data.step} / ${state.maxSteps}`;
-            }
-        }
-
-        // Escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Add log entry
-        function addLog(entry) {
-            if (!state.logsStarted) {
-                state.logsStarted = true;
-                elements.logContent.innerHTML = '';
-            }
-
-            const div = document.createElement('div');
-            const eventClass = entry.event ? `event-${entry.event}` : '';
-            div.className = `log-entry ${eventClass}`;
-
-            const time = new Date(entry.ts).toLocaleTimeString();
-            const eventType = entry.event || 'info';
-            let dataText = '';
-
-            if (entry.run_id) updateSystemInfo({ run_id: entry.run_id });
-            if (entry.data) {
-                if (eventType === 'planner_output' && entry.data.text) {
-                    dataText = entry.data.text;
-                } else if (eventType === 'proposed_commands' && entry.data.commands) {
-                    dataText = 'Commands:\n' + entry.data.commands.map(c => '  ' + c).join('\n');
-                } else if (eventType === 'execution_result') {
-                    dataText = `Command: ${entry.data.command}\nExit Code: ${entry.data.exit_code}`;
-                    if (entry.data.stdout) dataText += `\n\nOutput:\n${entry.data.stdout.substring(0, 500)}`;
-                    if (entry.data.stderr) dataText += `\n\nStderr:\n${entry.data.stderr.substring(0, 200)}`;
-                } else if (eventType === 'approval_decision') {
-                    dataText = `Approved: ${entry.data.approved?.length || 0}, Rejected: ${entry.data.rejected?.length || 0}`;
-                } else if (eventType === 'start_run') {
-                    dataText = `Goal: ${entry.data.goal || 'N/A'}`;
-                    if (entry.data.run_id) updateSystemInfo({ run_id: entry.data.run_id });
-                } else if (eventType === 'run_complete') {
-                    dataText = `Model claim: ${entry.data.reason || 'unverified completion'}. Verify the recorded output.`;
-                } else if (eventType === 'error') {
-                    dataText = entry.data.message || JSON.stringify(entry.data);
-                } else if (typeof entry.data === 'string') {
-                    dataText = entry.data;
-                } else {
-                    dataText = JSON.stringify(entry.data, null, 2);
-                }
-
-                if (entry.data.attempt !== undefined) {
-                    updateSystemInfo({ step: entry.data.attempt });
-                }
-            }
-
-            // Model output is always escaped; it cannot become browser code.
-            const isMarkdown = false;
-            const renderedData = escapeHtml(dataText);
-            const markdownClass = isMarkdown ? ' markdown-rendered' : '';
-
-            div.innerHTML = `
-                <div class="log-header">
-                    <span class="log-time">${time}</span>
-                    <span class="log-event ${eventClass}">${eventType.replace(/_/g, ' ')}</span>
-                </div>
-                <div class="log-data${markdownClass}">${renderedData}</div>
-            `;
-
-            elements.logContent.appendChild(div);
-            elements.logContent.scrollTop = elements.logContent.scrollHeight;
-        }
-
-        // Show approval panel
-        function showApprovalPanel(commands, proposalId, privilegedIndices = []) {
-            state.proposalId = proposalId;
-            state.privilegedIndices = privilegedIndices;
-            state.pendingCommands = commands;
-            elements.commandList.innerHTML = '';
-            elements.commandCount.textContent = commands.length;
-
-            commands.forEach((cmd, i) => {
-                const item = document.createElement('div');
-                item.className = 'command-item';
-                item.innerHTML = `
-                    <input type="checkbox" id="cmd${i}">
-                    <label for="cmd${i}" class="command-text">${escapeHtml(cmd)}</label>
-                `;
-                elements.commandList.appendChild(item);
-            });
-
-            elements.approvalOverlay.classList.add('visible');
-            elements.approvalPanel.classList.add('visible');
-        }
-
-        // Hide approval panel
-        function hideApprovalPanel() {
-            elements.approvalOverlay.classList.remove('visible');
-            elements.approvalPanel.classList.remove('visible');
-            state.pendingCommands = [];
-            state.proposalId = null;
-            state.privilegedIndices = [];
-        }
-
-        // Get selected command indices
-        function getSelectedIndices() {
-            const indices = [];
-            state.pendingCommands.forEach((_, i) => {
-                const checkbox = document.getElementById('cmd' + i);
-                if (checkbox && checkbox.checked) {
-                    indices.push(i);
-                }
-            });
-            return indices;
-        }
-
-        // API calls
-        async function apiCall(endpoint, data = null) {
-            const options = {
-                method: data ? 'POST' : 'GET',
-                headers: { 'Content-Type': 'application/json', 'X-Hephestus-Token': operatorToken }
-            };
-            if (data) options.body = JSON.stringify(data);
-
-            try {
-                const response = await fetch('/api/' + endpoint, options);
-                return response.json();
-            } catch (error) {
-                console.error('API call failed:', error);
-                showToast('API call failed: ' + error.message, 'error');
-                return { error: error.message };
-            }
-        }
-
-        async function submitApproval(decision) {
-            const needsPrivilege = (decision.approved || []).some(i => state.privilegedIndices.includes(i));
-            if (needsPrivilege && window.prompt('Privilege escalation detected. Type yes to approve:') !== 'yes') return false;
-            const result = await apiCall('approve', { ...decision, proposal_id: state.proposalId, confirmed_privilege: needsPrivilege });
-            if (result.error) { showToast(result.error, 'error'); return false; }
-            hideApprovalPanel();
-            return true;
-        }
-
-        // Start run
-        async function startRun() {
-            const goal = elements.goalInput.value.trim();
-            if (!goal) {
-                showToast('Please enter a task goal', 'warning');
-                elements.goalInput.focus();
-                return;
-            }
-
-            const context = elements.contextInput.value.trim();
-
-            state.logsStarted = false;
-            state.steps = 0;
-            state.runId = null;
-            elements.stepsInfo.textContent = '0 / ' + state.maxSteps;
-            elements.runIdInfo.textContent = '-';
-
-            const result = await apiCall('start', { goal, context });
-            if (result.error) {
-                showToast(result.error, 'error');
-                return;
-            }
-
-            showToast('Task started', 'success');
-            connectStream();
-        }
-
-        // Stop run
-        async function stopRun() {
-            const result = await apiCall('stop', {});
-            if (result.error) { showToast(result.error, 'error'); return; }
-            hideApprovalPanel();
-            showToast('Stop requested. Local inference may need to finish; no later commands will run.', 'warning');
-        }
-
-        // Approve selected
-        async function approveSelected() {
-            const indices = getSelectedIndices();
-            if (indices.length === 0) {
-                showToast('No commands selected', 'warning');
-                return;
-            }
-            await submitApproval({ approved: indices });
-        }
-
-        // Approve all
-        async function approveAll() {
-            const indices = state.pendingCommands.map((_, i) => i);
-            await submitApproval({ approved: indices });
-        }
-
-        // Reject all
-        async function rejectAll() {
-            await submitApproval({ reject_all: true });
-        }
-
-        // Abort
-        async function abort() {
-            if (!await submitApproval({ abort: true })) return;
-            showToast('Run aborted', 'error');
-        }
-
-        // Update goal
-        async function updateGoal() {
-            const newInstructions = elements.goalUpdateInput.value.trim();
-            if (!newInstructions) {
-                showToast('Enter updated instructions first', 'warning');
-                elements.goalUpdateInput.focus();
-                return;
-            }
-            const accepted = await submitApproval({ update_goal: newInstructions });
-            if (!accepted) return;
-            elements.goalUpdateInput.value = '';
-            hideApprovalPanel();
-            showToast('Goal updated - replanning...', 'info');
-        }
-
-        // Clear logs
-        function clearLogs() {
-            state.logsStarted = false;
-            elements.logContent.innerHTML = `
-                <div class="log-empty">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    <p>No activity yet</p>
-                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a task goal and click Start to begin</p>
-                </div>
-            `;
-        }
-
-        // Connect to SSE stream
-        function connectStream() {
-            if (state.eventSource) {
-                state.eventSource.close();
-            }
-
-            state.eventSource = new EventSource('/api/stream');
-
-            state.eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (data.type === 'status') {
-                    updateStatus(data.status);
-
-                    if (data.status === 'waiting_for_user' && data.pending_commands && data.pending_commands.length > 0) {
-                        showApprovalPanel(data.pending_commands, data.proposal_id, data.privileged_indices || []);
-                    } else {
-                        hideApprovalPanel();
-                    }
-
-                    if (data.error_message && data.status === 'error') {
-                        addLog({
-                            ts: new Date().toISOString(),
-                            event: 'error',
-                            data: { message: data.error_message }
-                        });
-                    }
-
-                    if (data.status === 'completed' || data.status === 'error') {
-                        const completedStream = state.eventSource;
-                        setTimeout(() => {
-                            completedStream?.close();
-                            if (state.eventSource === completedStream) {
-                                state.eventSource = null;
-                            }
-                        }, 1000);
-                    }
-                } else if (data.type === 'log') {
-                    addLog(data.entry);
-                }
-            };
-
-            state.eventSource.onerror = () => {
-                console.log('SSE connection error');
-            };
-        }
-
-        // Check LLM status
-        async function checkLLMStatus() {
-            const result = await apiCall('state');
-            if (result.llm_reachable === true) {
-                elements.llmStatus.textContent = 'Available';
-                elements.llmStatus.className = 'info-badge connected';
-            } else if (result.llm_reachable === false) {
-                elements.llmStatus.textContent = 'Not configured';
-                elements.llmStatus.className = 'info-badge disconnected';
-            } else {
-                elements.llmStatus.textContent = 'Unknown';
-                elements.llmStatus.className = 'info-badge unknown';
-            }
-
-            if (result.backend) {
-                elements.backendInfo.textContent = result.backend;
-            }
-
-            if (result.max_steps) {
-                state.maxSteps = result.max_steps;
-                elements.stepsInfo.textContent = `${state.steps} / ${state.maxSteps}`;
-            }
-        }
-
-        // Toggle sidebar (mobile)
-        function toggleSidebar() {
-            elements.sidebar.classList.toggle('open');
-        }
-
-        // Toggle help modal
-        function toggleHelpModal(show) {
-            elements.helpModal.classList.toggle('visible', show);
-        }
-
-        // Event listeners
-        elements.startBtn.addEventListener('click', startRun);
-        elements.stopBtn.addEventListener('click', stopRun);
-        elements.clearLogsBtn.addEventListener('click', clearLogs);
-        elements.clearLogsBtnHeader.addEventListener('click', clearLogs);
-        elements.refreshBtn.addEventListener('click', () => {
-            checkLLMStatus();
-            showToast('State refreshed', 'success');
-        });
-        elements.approveSelectedBtn.addEventListener('click', approveSelected);
-        elements.approveAllBtn.addEventListener('click', approveAll);
-        elements.rejectAllBtn.addEventListener('click', rejectAll);
-        elements.abortBtn.addEventListener('click', abort);
-        elements.updateGoalBtn.addEventListener('click', updateGoal);
-        elements.goalUpdateInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') updateGoal();
-        });
-        elements.helpBtn.addEventListener('click', () => toggleHelpModal(true));
-        elements.helpModalClose.addEventListener('click', () => toggleHelpModal(false));
-        elements.helpModal.addEventListener('click', (e) => {
-            if (e.target === elements.helpModal) toggleHelpModal(false);
-        });
-        elements.menuBtn?.addEventListener('click', toggleSidebar);
-        elements.approvalOverlay.addEventListener('click', () => {});
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // Ctrl+Enter to start
-            if (e.ctrlKey && e.key === 'Enter' && !elements.startBtn.disabled) {
-                e.preventDefault();
-                startRun();
-            }
-
-            // Escape to close modals
-            if (e.key === 'Escape') {
-                if (elements.helpModal.classList.contains('visible')) {
-                    toggleHelpModal(false);
-                }
-            }
-
-            // A to approve all (when panel open)
-            if (e.key === 'a' && elements.approvalPanel.classList.contains('visible') && !e.target.matches('input, textarea')) {
-                e.preventDefault();
-                approveAll();
-            }
-
-            // R to reject all (when panel open)
-            if (e.key === 'r' && elements.approvalPanel.classList.contains('visible') && !e.target.matches('input, textarea')) {
-                e.preventDefault();
-                rejectAll();
-            }
-        });
-
-        // Initialize
-        async function init() {
-            const data = await apiCall('state');
-            updateStatus(data.status);
-
-            if (data.status === 'waiting_for_user' && data.pending_commands && data.pending_commands.length > 0) {
-                showApprovalPanel(data.pending_commands, data.proposal_id, data.privileged_indices || []);
-                connectStream();
-            } else if (data.status === 'running' || data.status === 'stopping') {
-                connectStream();
-            }
-
-            checkLLMStatus();
-        }
-
-        async function authenticateAndInit() {
-            const result = await apiCall('session', {});
-            if (result.error) {
-                elements.startBtn.disabled = true;
-                elements.llmStatus.textContent = 'Open the private URL from the terminal';
-                showToast(result.error, 'error');
-                return;
-            }
-            await init();
-        }
-        authenticateAndInit();
-    </script>
+    <div id="libraryStrip" class="library-strip"></div>
+    <div id="modelGrid" class="cart-grid"><div class="session-empty">Scanning the models folder…</div></div>
+    <input id="coverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+  </div></div>
+</main>
+
+<main id="helpView" class="view">
+  <div class="main"><article class="help-guide">
+    <h1>Getting started with Hephestus 2.0</h1>
+    <p><strong>FULL, EXPLICIT AUTHORIZATION IS REQUIRED before launching or using Hephestus against any system. Use only within an agreed scope on systems you own or have permission to assess.</strong></p>
+    <p>A supervised local model proposes commands. You review each command before execution. Choose where commands run using <strong>Local / Remote</strong> in Workspace.</p>
+    <section><h2>From master's research to public release</h2>
+      <p>Hephestus began as Daryl Gatt's MSc in Cyber Security artifact at the University of Wolverhampton. The 2026 dissertation, <em>Chains of Command: How Agentic AI Alters Attacker Tactics, Techniques and Procedures</em>, evaluated an earlier, less capable research beta. It was then substantially upgraded into V1 for the author's red-team work and developed further into this public V2.</p>
+      <p><strong>The master's study did not evaluate V1 or V2.</strong> The beta produced useful Linux enumeration and partial Windows findings, but its retained outputs did not verify the protected-file or privileged-shell goals. The study informs the project's focus on approvals and inspectable output; it provides no performance benchmark or safety validation for this release. See README and <code>docs/RESEARCH-BACKGROUND.md</code> for methods, findings and sources.</p></section>
+    <section><h2>1. Load a model</h2>
+      <p><strong>Start with a coding-focused Instruct/Chat model in a single, complete <code>.gguf</code> file.</strong> Coding models are a useful starting point for scripts; general-purpose Instruct models can also work. No model guarantees correct commands. Prefer Instruct/Chat over a Base-only model and always review proposals.</p>
+      <p><strong>Easiest download:</strong> from the project folder run <code>python setup.py --model-only --download-model</code> after installation, or <code>python setup.py --download-model</code> to install dependencies too. This gets the pinned official <code>qwen2.5-coder-1.5b-instruct-q4_k_m.gguf</code> (about 1.12 GB), verifies its size/header/SHA-256 and saves it in <code>models/</code>.</p>
+      <p><strong>Manual download:</strong> visit <a href="https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/tree/main" target="_blank" rel="noopener noreferrer">the official model files on Hugging Face</a>, open Files and versions and download exactly <code>qwen2.5-coder-1.5b-instruct-q4_k_m.gguf</code> using the file download control. Or search <a href="https://huggingface.co/models" target="_blank" rel="noopener noreferrer">Hugging Face Models</a> for Coder Instruct GGUF. Read the publisher's model card, license, runtime requirements and checksums. Manual downloads do not automatically receive setup's pinned verification.</p>
+      <p>Download one complete quantization, not every file. <code>Q4_K_M</code> is a practical starting compression; Q5/Q8 variants need more memory. For this workflow avoid split shards, LoRA adapters, embedding models and <code>mmproj</code> files. <code>.safetensors</code>, PyTorch <code>.bin</code>, GPTQ, AWQ and EXL2 cannot load directly here. A compatible self-contained GGUF normally needs no separate tokenizer/config download, Ollama installation or cloud API key.</p>
+      <ol><li>Finish the download and move the actual complete <code>.gguf</code> into the application's <code>models/</code> folder. Do not use a ZIP, partial download or saved web page.</li><li>Open <strong>Models → Rescan</strong>, choose the <strong>Load</strong> control, and wait for <strong>Loaded</strong>. Nothing loads automatically at startup.</li><li>Try “Print a greeting” in Local mode and inspect the command before approving. Stop a task and eject before switching models.</li></ol>
+      <p>Source checkouts use the project's models folder; installed packages use the per-user application data folder, configurable with <code>HEPHESTUS_DATA_DIR</code> (see README). The Models screen scans files; it does not download from Hugging Face. A GGUF extension alone does not guarantee that its architecture or chat template works with this runtime.</p>
+      <p>CPU is supported. GPU offload requires a compatible inference wheel and drivers; choose the backend during setup. Memory use exceeds model file size and grows with context. Start small; if memory runs out, lower context/batch size, reduce GPU layers or use a smaller model. Garbled output can indicate an incompatible chat template.</p></section>
+    <section><h2>2. Work on this computer</h2>
+      <p>Local is selected on every launch. No worker, relay, keys or tunnel are needed. Enter an authorized objective and scope in Workspace. Quick performs a small task; Goal iterates toward an objective. Review the complete proposal in the browser: approve selected, reject, update guidance, or abort. Commands run with your account's permissions.</p>
+      <p>Try a harmless task such as “Print a greeting”. Stop ends the task; it keeps your model loaded. A dry run configured in YAML records proposals without executing them.</p></section>
+    <section><h2>3. Work on another Windows computer</h2>
+      <p>The model and browser stay on this controller. Only approved commands execute on the remote computer. Install the optional <code>cloudflared</code> executable on the controller first (see README). The target needs Windows PowerShell 5.1 or later and outbound HTTPS access; it needs no Python or model.</p>
+      <p>The relay runs temporarily in memory on your controller. <code>cloudflared</code> gives it a temporary HTTPS <code>trycloudflare.com</code> address through Cloudflare's network; Cloudflare does not host your model or Hephestus relay. The target's <code>remote_handler.ps1</code> makes outbound HTTPS requests to fetch jobs and return encrypted results. Only the relay is exposed; your browser UI stays on loopback. Cloudflare carries traffic and may observe connection metadata.</p>
+      <ol><li>Stop any active task and select Remote in Workspace. Allow up to 25 seconds for the temporary tunnel.</li>
+      <li>Download the private connection ZIP below. Transfer it securely to the authorized target and extract <strong>all</strong> files into one private folder.</li>
+      <li>On the target run <code>.\Connect-Hephestus.ps1</code> in PowerShell, or open that script in PowerShell ISE and press F5. Follow the target's script execution policy. Keep the script running.</li>
+      <li>Wait for “Remote worker connected” on this controller, then start a task. The target operator reviews every full script: <strong>Y</strong> approves, <strong>N</strong> rejects, <strong>U</strong> requests an edit, <strong>Q</strong> quits.</li>
+      <li>When finished, stop the task and select Local. This closes the tunnel and destroys the controller's temporary keys. Delete the downloaded ZIP and extracted folder from both computers.</li></ol>
+      <p id="remoteConnectionStatus" role="status">Select Remote in Workspace to prepare a connection.</p>
+      <p><button id="downloadConnectionBtn" class="btn primary" disabled>Download private connection ZIP</button></p>
+      <p id="remoteConnectionUrl" class="connection-url"></p>
+      <p>If you change the command timeout or output limit in Settings, download a new bundle and relaunch the worker before starting another task. The bundle grants access to this remote session. Never upload it to GitHub. Every new connection needs a new bundle. Stop &amp; disconnect cancels the task and current worker; restart the worker script to reconnect while the same remote session is open. Returning to Local or closing the server ends that session.</p></section>
+    <section><h2>4. Review evidence and export</h2>
+      <p>Session history stores local command proposals, decisions, output and events. Ask the AI can explain selected evidence while no task is running. Export JSON for machine-readable evidence or PDF for a generic cybersecurity audit report, including SHA-256 integrity hashes. Hashes detect changes to exported evidence; they do not prove that a goal succeeded or independently authenticate the report.</p>
+      <p>Reports contain your supplied scope and captured output. Review them before sharing. Delete sessions in the sidebar when no longer needed.</p></section>
+    <section><h2>Troubleshooting</h2>
+      <ul><li><strong>No model:</strong> add a compatible GGUF to models/, refresh and load it.</li>
+      <li><strong>Cannot select a mode:</strong> stop the active task and wait for it to finish stopping.</li>
+      <li><strong>No cloudflared:</strong> install it on the controller and restart the app. Local remains available.</li>
+      <li><strong>Worker offline:</strong> run the extracted launcher, check outbound HTTPS and synchronize both clocks. If the tunnel ended, select Local then Remote and transfer a fresh bundle.</li>
+      <li><strong>Script blocked:</strong> follow your administrator's approved execution/signing policy. ISE is optional.</li>
+      <li><strong>Permission denied:</strong> commands use the target account's rights. No automatic elevation is provided.</li>
+      <li><strong>Private UI access:</strong> open the complete capability URL printed by the launcher. Keep it private and do not expose port 5000.</li></ul></section>
+  </article></div>
+</main>
+
+<main id="settingsView" class="view">
+  <div class="main"><div class="settings"></div></div>
+</main>
+
+
+<div id="approvalDialog" class="modalbackdrop" role="dialog" aria-modal="true" aria-labelledby="approvalTitle">
+  <div class="modal">
+    <div class="modalhead"><span class="modalicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 4 4L19 6"/></svg></span><div><h2 id="approvalTitle">Approve proposed command</h2><p>Review the exact command before it runs. Use the pencil to ask the AI to edit a command (e.g. "change the message to hello") without leaving this step.</p></div></div>
+    <div class="modalbody"><div id="approvalCommandList"></div><div class="field-gap"><label for="approvalGuidance">Or change direction</label><textarea id="approvalGuidance" placeholder="Tell Hephestus how to re-plan instead."></textarea></div></div>
+    <div class="modalfoot"><button id="abortBtn" class="btn danger">Abort task</button><div class="modalright"><button id="rejectBtn" class="btn">Reject all</button><button id="approveBtn" class="btn primary">Approve selected</button></div></div>
+  </div>
+</div>
+
+<div id="toastStack" class="toasts" aria-live="polite"></div>
 </body>
 </html>

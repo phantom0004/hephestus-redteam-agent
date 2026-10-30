@@ -5,19 +5,20 @@ llm:
   temperature: 0.45
   top_p: 0.9
   context_size: 8192
-  gpu_layers: 0       # CPU; -1 asks a GPU-enabled build to offload all layers.
+  gpu_auto: true      # Size GPU offload from free VRAM + the model; set false to use gpu_layers.
+  gpu_layers: 0       # Manual fallback when gpu_auto is false. -1 offloads all layers.
   threads: 4
   batch_size: 512
   chat_format: ""    # Empty uses GGUF chat metadata; set only for a known template.
 runtime:
-  backend: local     # local executes on your host; ssh executes on a verified peer.
+  backend: local     # Default: this computer. Select Remote in the UI for a Windows worker.
   dry_run: true
-  log_dir: logs
   max_steps: 15
   timeout_seconds: 0 # Zero disables the overall deadline.
   command_timeout_seconds: 120
-  max_context_tokens: 5000
-  output_max_chars: 32000
+  max_context_tokens: 5000     # Max prompt tokens per model call; oldest evidence is trimmed to fit.
+  output_max_chars: 32000      # Max output captured per command for the operator and export.
+  observation_max_chars: 2400  # How much of each command's output the model reads (head + tail).
   max_repeated_failures: 3
   target_os: auto
   require_supervisor_approval: true
@@ -26,10 +27,9 @@ policy:
   max_violations: 3
   allowlist: []       # Regex screening only; never a shell sandbox.
   # Omit denylist and blocked_primitives to retain the built-in defaults.
-ssh:
-  host: ""
-  port: 22
-  username: ""
-  key_path: ""       # Empty uses your SSH agent/local key discovery.
-  known_hosts: ""    # Empty uses system known_hosts; unknown peers are rejected.
-  timeout_seconds: 30
+relay:
+  url: http://127.0.0.1:8000
+  master_key_path: secrets/worker.key
+  request_timeout_seconds: 10
+  result_poll_interval: 0.5
+  job_ttl_seconds: 240

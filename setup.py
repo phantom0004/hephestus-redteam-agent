@@ -21,6 +21,26 @@ MODEL_SHA256 = "cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046
 MODEL_BYTES = 1117320768
 MODEL_URL = f"https://huggingface.co/{MODEL_REPOSITORY}/resolve/{MODEL_REVISION}/{MODEL_FILENAME}"
 WHEEL_BACKENDS = ("cpu", "cu130", "cu132", "metal", "vulkan", "rocm72")
+# Operator data that setup must never delete, overwrite or build an environment in:
+# the model library (multi-GB weights and cover art) and saved sessions.
+PROTECTED_DIRS = (ROOT / "models", ROOT / "sessions", ROOT / "secrets")
+
+
+def ensure_data_directories():
+    """Create (never clear) the folders that hold the operator's models and sessions."""
+    for directory in PROTECTED_DIRS[:2]:
+        directory.mkdir(parents=True, exist_ok=True)
+
+
+def assert_not_protected(path):
+    """Refuse to use the project root or any protected data folder as a work directory."""
+    resolved = Path(path).expanduser().resolve()
+    if resolved == ROOT:
+        raise RuntimeError("Refusing to use the project folder itself as the environment directory")
+    for protected in PROTECTED_DIRS:
+        protected = protected.resolve()
+        if resolved == protected or protected in resolved.parents or resolved in protected.parents:
+            raise RuntimeError(f"Refusing to touch protected data folder: {protected}")
 
 
 def _verified(path):
@@ -57,7 +77,7 @@ def download_model(destination=None):
     temporary = Path(temporary)
     try:
         request = urllib.request.Request(
-            MODEL_URL, headers={"User-Agent": "Hephestus-Setup/0.2"}
+            MODEL_URL, headers={"User-Agent": "Hephestus-Setup/2.0"}
         )
         received = 0
         digest = hashlib.sha256()
@@ -100,6 +120,7 @@ def environment_python(directory):
 
 def install_dependencies(directory, backend):
     directory = directory.expanduser().resolve()
+    assert_not_protected(directory)
     interpreter = environment_python(directory)
     if not interpreter.is_file():
         if directory.exists() and any(directory.iterdir()):
@@ -159,7 +180,9 @@ def install_dependencies(directory, backend):
         [
             str(interpreter),
             "-c",
-            "import click, rich, yaml, flask, paramiko; from llama_cpp import Llama; print('Runtime imports verified')",
+            "import click, rich, yaml, flask, cryptography; "
+            "from hephestus.src.local_llm import _load_llama_class; "
+            "_load_llama_class(); print('Runtime imports verified')",
         ],
         check=True,
     )
@@ -198,6 +221,7 @@ def main(argv=None):
     if sys.version_info < (3, 10):  # noqa: UP036 - bootstrap checks before package installation
         parser.error("Python 3.10 or newer is required; Python 3.12 is recommended")
     try:
+        ensure_data_directories()
         interpreter = environment_python(args.venv.resolve())
         if not args.model_only:
             interpreter = install_dependencies(args.venv, args.llama_backend)
@@ -223,10 +247,8 @@ def main(argv=None):
             )
         print("Setup finished.")
         if not args.model_only:
-            print(
-                f'CLI: "{interpreter}" -m hephestus.cli "List the current directory" --dry-run'
-            )
-            print(f'Web: "{interpreter}" "{ROOT / "web.py"}"')
+            print(f'Launch: "{interpreter}" "{ROOT / "start_hephestus.py"}"')
+            print('All controller operations are performed in the browser; the terminal shows server logs.')
         return 0
     except (
         OSError,

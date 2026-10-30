@@ -1,0 +1,47 @@
+# Installation and Python/build caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage*
+htmlcov/
+build/
+dist/
+
+# Private configuration, credentials and engagement evidence
+config.yaml
+config.local.yaml
+runtime-settings.json
+.env
+.env.*
+!.env.example
+secrets/
+sessions/
+logs/
+exports/
+remote-connection*.zip
+worker.key
+relay-auth.key
+*.pem
+*.pfx
+*.p12
+*.key
+HEPHESTUS_STOP
+
+# Downloads and model library; retain its provisioning guide
+models/**
+!models/README.md
+*.gguf
+*.part
+cloudflared*
+
+# Editor/OS scratch
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+work/

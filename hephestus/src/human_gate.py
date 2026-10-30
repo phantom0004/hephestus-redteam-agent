@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from hephestus import config
 from hephestus.src.policy_engine import is_privesc_command
@@ -6,7 +7,24 @@ from hephestus.src.policy_engine import is_privesc_command
 # Type alias for the approval function signature:
 #   Input:  list of command strings
 #   Output: (approved_cmds, rejected_cmds, aborted_flag, goal_update)
-ApproverFunc = Callable[[list[str]], tuple[list[str], list[str], bool, str | None]]
+@dataclass(frozen=True)
+class ApprovalDecision:
+    """An operator decision bound to one immutable, possibly revised proposal."""
+    proposals: tuple[str, ...]
+    approved: tuple[str, ...]
+    rejected: tuple[str, ...]
+    aborted: bool
+    goal_update: str | None
+
+    def __iter__(self):
+        # Retain the established four-value callback interface.
+        yield list(self.approved)
+        yield list(self.rejected)
+        yield self.aborted
+        yield self.goal_update
+
+
+ApproverFunc = Callable[[list[str]], tuple[list[str], list[str], bool, str | None] | ApprovalDecision]
 
 # Pluggable approver: when set (e.g. by the web UI or tests), this replaces
 # the default interactive console prompt.  None = use console input.

@@ -1,4 +1,3 @@
-import json
 import os
 import platform
 import re
@@ -47,9 +46,7 @@ def clear_log_callbacks() -> None:
 class Logger:
     def __init__(self, run_id: str = None) -> None:
         self.run_id = run_id or str(uuid.uuid4())
-        os.makedirs(config.LOG_DIR, exist_ok=True)
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        self.path = os.path.join(config.LOG_DIR, f"run_{ts}_{self.run_id[:8]}.jsonl")
+        self.path = None
 
         # Build a set of sensitive strings to redact from log output.
         # We scan environment variables whose names contain key/token/pass/secret
@@ -97,6 +94,20 @@ class Logger:
             ("_password", "_secret", "_api_key", "_access_token")
         )
 
+    # Command text must be shown, approved and copied exactly as it will run, so
+    # the generic "password=..." pattern rewrite never applies to it. Known
+    # secret values from the environment are still removed.
+    VERBATIM_KEYS = {"command", "commands", "approved", "rejected", "original_command", "variant"}
+
+    def _redact_secrets_only(self, obj: Any) -> Any:
+        if isinstance(obj, str):
+            for secret in self.sensitive_strings:
+                obj = obj.replace(secret, "[REDACTED]")
+            return obj
+        if isinstance(obj, list):
+            return [self._redact_secrets_only(x) for x in obj]
+        return obj
+
     def _redact(self, obj: Any) -> Any:
         """Recursively walk a payload and redact sensitive data.
 
@@ -113,6 +124,8 @@ class Logger:
             for k, v in obj.items():
                 if self._is_sensitive_key(str(k)):
                     redacted[k] = "[REDACTED]"
+                elif str(k) in self.VERBATIM_KEYS:
+                    redacted[k] = self._redact_secrets_only(v)
                 else:
                     redacted[k] = self._redact(v)
             return redacted
@@ -128,9 +141,6 @@ class Logger:
             "data": self._redact(payload),
             "dry_run": config.DRY_RUN,
         }
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
-
         # Notify all registered callbacks
         for callback in list(_log_callbacks):
             try:
